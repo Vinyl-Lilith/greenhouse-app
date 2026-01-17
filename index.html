@@ -3,471 +3,716 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BioDome Control | Project Synthetos</title>
+    <title>BioDome OS v2.0 | Synthetos</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    
     <style>
         :root {
-            --neon-green: #39ff14;
-            --dark-bg: #0a0a12;
-            --panel-bg: #1a1a24;
-            --alert-red: #ff2a2a;
+            --primary: #00f3ff;    /* Cyan */
+            --accent: #ff0055;     /* Cyber Pink */
+            --bio: #39ff14;        /* Bio Green */
+            --bg-dark: #050510;
+            --glass: rgba(20, 20, 30, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
         }
+
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
 
         body {
-            font-family: 'Courier New', monospace;
-            background-color: var(--dark-bg);
+            font-family: 'Rajdhani', sans-serif;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
             color: white;
             margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-            touch-action: manipulation; /* Improves touch response */
-        }
-
-        /* --- Dashboard UI --- */
-        #dashboard {
+            height: 100vh;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            padding: 10px;
-            gap: 15px;
-            max-width: 1200px;
-            margin: 0 auto;
         }
 
-        header {
-            text-align: center;
-            border-bottom: 2px solid var(--neon-green);
-            padding-bottom: 10px;
+        /* --- UI LAYER --- */
+        #app-container {
+            flex: 1;
             position: relative;
+            overflow-y: auto;
+            padding-bottom: 80px; /* Space for nav */
         }
 
-        .video-container {
-            width: 100%;
-            background: #000;
-            border: 2px solid var(--neon-green);
-            border-radius: 8px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        #camFeed {
-            width: 100%;
-            display: block;
-            /* Camera is upside down, physical flip in Pi code, 
-               but if Pi code fails, uncomment below: */
-            /* transform: rotate(180deg); */
-            transition: transform 0.3s;
-        }
-
-        .video-container.enlarged {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            z-index: 999;
-            background: black;
+        /* Status Bar */
+        .status-bar {
             display: flex;
-            align-items: center;
-            justify-content: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            z-index: 10;
+        }
+        .status-dot {
+            height: 10px; width: 10px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px var(--accent);
+            transition: background 0.3s;
+        }
+        .status-dot.connected { background-color: var(--bio); box-shadow: 0 0 10px var(--bio); }
+
+        /* Pages */
+        .page {
+            display: none;
+            padding: 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Titles */
+        h2 {
+            font-family: 'Orbitron', sans-serif;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 5px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--primary);
         }
 
-        .grid-readings {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 10px;
-        }
-
+        /* CARDS (Glassmorphism) */
         .card {
-            background: var(--panel-bg);
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
             padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid var(--neon-green);
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        /* DASHBOARD GRID */
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .sensor-item {
             text-align: center;
-        }
-
-        .card h3 { margin: 0; font-size: 0.8rem; color: #888; }
-        .card span { font-size: 1.5rem; font-weight: bold; }
-
-        .controls {
-            background: var(--panel-bg);
+            background: rgba(255,255,255,0.05);
             padding: 15px;
             border-radius: 8px;
         }
+        .sensor-value { font-size: 2rem; font-weight: bold; color: white; }
+        .sensor-label { font-size: 0.9rem; color: #aaa; text-transform: uppercase; }
 
-        .toggle-row {
+        /* CAMERA */
+        .cam-frame {
+            width: 100%;
+            height: 200px;
+            background: #000;
+            border-radius: 8px;
+            border: 2px solid #333;
+            overflow: hidden;
+            position: relative;
+        }
+        #camImg { width: 100%; height: 100%; object-fit: cover; }
+        .rec-tag { position: absolute; top: 10px; left: 10px; color: red; font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* TOGGLES (Manual) */
+        .control-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
         }
-
-        /* Easter Egg Icon */
-        #strawberry {
-            position: absolute;
-            right: 10px;
-            top: 10px;
-            font-size: 24px;
-            cursor: pointer;
-            user-select: none;
-            opacity: 0.7;
-        }
-
-        /* --- Game UI --- */
-        #gameLayer {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: #111;
-            z-index: 1000;
-        }
-
-        canvas { display: block; width: 100%; height: 100%; }
-
-        .game-ui {
-            position: absolute;
-            pointer-events: none; /* Let clicks pass to canvas */
-            width: 100%; height: 100%;
-            top: 0; left: 0;
-        }
-
-        .health-bar {
-            position: absolute;
-            height: 20px;
+        .btn-toggle {
+            padding: 8px 20px;
             background: #333;
-            border: 2px solid white;
+            border: 1px solid #555;
+            color: #888;
+            border-radius: 4px;
+            font-family: 'Orbitron';
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        #bossHealth { top: 20px; left: 10%; width: 80%; }
-        #bossHealthFill { width: 100%; height: 100%; background: red; transition: width 0.2s; }
-        #playerHealth { top: 50px; left: 10%; width: 30%; height: 10px; }
-        #playerHealthFill { width: 100%; height: 100%; background: var(--neon-green); }
-
-        #gameMessage {
-            position: absolute;
-            top: 40%; width: 100%;
-            text-align: center;
-            font-size: 3rem;
-            color: white;
-            text-shadow: 0 0 10px red;
-            display: none;
+        .btn-toggle.active {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 15px var(--primary);
+            border-color: var(--primary);
         }
 
-        .mobile-controls {
-            position: absolute;
-            bottom: 20px;
+        /* INPUTS (Settings) */
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; color: #ccc; }
+        .input-group input {
             width: 100%;
-            height: 150px;
-            pointer-events: auto;
-            display: none; /* Hidden on PC */
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #444;
+            color: var(--primary);
+            font-family: 'Orbitron';
+            border-radius: 4px;
+        }
+        .btn-save {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, var(--bio), #228b22);
+            color: black;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
         }
 
-        #joystick {
+        /* NAVIGATION BAR */
+        .nav-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 70px;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid #333;
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #666;
+            font-size: 0.8rem;
+            cursor: pointer;
+            width: 25%;
+        }
+        .nav-item span { font-size: 1.5rem; margin-bottom: 2px; }
+        .nav-item.active { color: var(--primary); }
+
+        /* --- GAME LAYER --- */
+        #game-ui {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 200;
+            display: none; /* Hidden by default */
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        .hud { position: absolute; pointer-events: none; width: 100%; padding: 20px; top: 0; box-sizing: border-box; }
+        .bar-container { width: 100%; height: 20px; background: #333; margin-bottom: 5px; border: 1px solid #555; }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.1s linear; }
+        #boss-hp { background: var(--accent); }
+        #player-hp { background: var(--bio); width: 100%; }
+        
+        /* Mobile Controls */
+        .controls-layer {
             position: absolute;
-            left: 30px; bottom: 30px;
-            width: 100px; height: 100px;
+            bottom: 20px; left: 0; width: 100%;
+            height: 150px;
+            pointer-events: none; /* Let touches pass through to specific elements */
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+        }
+        .touch-zone {
+            width: 120px; height: 120px;
             background: rgba(255,255,255,0.1);
             border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255,255,255,0.2);
+            pointer-events: auto;
+            position: relative;
         }
-
-        .action-btn {
-            position: absolute;
-            width: 60px; height: 60px;
+        #stick {
+            width: 50px; height: 50px;
+            background: rgba(255,255,255,0.5);
             border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            border: 2px solid white;
-            color: white;
-            font-weight: bold;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        #btn-action {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 0, 85, 0.3);
+            border: 2px solid var(--accent);
+            pointer-events: auto;
             display: flex;
             align-items: center; justify-content: center;
+            font-weight: bold;
+            font-family: 'Orbitron';
         }
-        #btnDash { right: 110px; bottom: 30px; }
-        #btnShoot { right: 30px; bottom: 60px; background: rgba(255,0,0,0.3); }
+        #btn-action:active { background: var(--accent); color: black; }
 
-        #exitGame {
-            position: absolute;
-            top: 10px; left: 10px;
-            pointer-events: auto;
-            padding: 10px;
-            background: #333;
-            color: white;
-            border: 1px solid white;
-            cursor: pointer;
+        .game-over-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 300;
+            display: none;
         }
-
-        /* --- Input Styling --- */
-        button.ctrl-btn {
-            background: #333;
-            color: white;
-            border: 1px solid var(--neon-green);
-            padding: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button.ctrl-btn.active { background: var(--neon-green); color: black; }
+        .glitch-text { font-size: 3rem; color: var(--accent); font-family: 'Orbitron'; text-shadow: 2px 2px var(--primary); }
     </style>
 </head>
 <body>
 
-    <div id="dashboard">
-        <header>
-            <h1>BioDome OS v1.0</h1>
-            <div id="strawberry">🍓</div>
-        </header>
-
-        <div class="video-container" id="vidCont">
-            <img id="camFeed" src="" alt="Waiting for Stream...">
-        </div>
-
-        <div class="grid-readings">
-            <div class="card"><h3>TEMP</h3><span id="dispTemp">--</span>°C</div>
-            <div class="card"><h3>HUMIDITY</h3><span id="dispHum">--</span>%</div>
-            <div class="card"><h3>SOIL 1</h3><span id="dispSoil1">--</span>%</div>
-            <div class="card"><h3>SOIL 2</h3><span id="dispSoil2">--</span>%</div>
-            <div class="card"><h3>N-P-K</h3><span id="dispNPK">--</span></div>
-        </div>
-
-        <div class="controls">
-            <div class="toggle-row">
-                <span>Mode: <strong id="modeText">AUTO</strong></span>
-                <label class="switch">
-                    <input type="checkbox" id="modeSwitch">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div id="manualControls" style="display:none; opacity: 0.5;">
-                <p>Manual Overrides:</p>
-                <div class="toggle-row">Exhaust Fan: <button class="ctrl-btn" onclick="toggle('exhaust')">OFF</button></div>
-                <div class="toggle-row">Peltier Sys: <button class="ctrl-btn" onclick="toggle('peltier')">OFF</button></div>
-                <div class="toggle-row">Water Pump: <button class="ctrl-btn" onclick="toggle('pump_w')">OFF</button></div>
-                <div class="toggle-row">Nutri Pump: <button class="ctrl-btn" onclick="toggle('pump_n')">OFF</button></div>
-            </div>
+    <div class="status-bar">
+        <div style="font-weight: bold; font-family: 'Orbitron'; letter-spacing: 2px;">BIODOME OS</div>
+        <div>
+            <span id="connection-status">DISCONNECTED</span>
+            <div class="status-dot" id="dot"></div>
         </div>
     </div>
 
-    <div id="gameLayer">
-        <canvas id="gameCanvas"></canvas>
-        <div class="game-ui">
-            <div id="exitGame">EXIT SIMULATION</div>
-            <div class="health-bar" id="bossHealth"><div id="bossHealthFill"></div></div>
-            <div class="health-bar" id="playerHealth"><div id="playerHealthFill"></div></div>
-            <div id="gameMessage"></div>
-            
-            <div class="mobile-controls" id="mobCtrl">
-                <div id="joystick"></div>
-                <div class="action-btn" id="btnDash">DASH</div>
-                <div class="action-btn" id="btnShoot">FIRE</div>
+    <div id="app-container">
+        
+        <div id="view-home" class="page active">
+            <div class="card">
+                <h2>Live Feed</h2>
+                <div class="cam-frame">
+                    <div class="rec-tag">REC</div>
+                    <img id="camImg" src="" alt="NO SIGNAL">
+                </div>
             </div>
+
+            <div class="sensor-grid">
+                <div class="sensor-item card">
+                    <div class="sensor-label">Temperature</div>
+                    <div class="sensor-value"><span id="val-temp">--</span>°C</div>
+                </div>
+                <div class="sensor-item card">
+                    <div class="sensor-label">Humidity</div>
+                    <div class="sensor-value"><span id="val-hum">--</span>%</div>
+                </div>
+                <div class="sensor-item card">
+                    <div class="sensor-label">Soil Moisture</div>
+                    <div class="sensor-value"><span id="val-soil">--</span>%</div>
+                </div>
+                <div class="sensor-item card">
+                    <div class="sensor-label">Nutrients (NPK)</div>
+                    <div class="sensor-value" style="font-size: 1.2rem;" id="val-npk">-- - -- - --</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-manual" class="page">
+            <div class="card">
+                <h2>System Override</h2>
+                <p style="color: #888; font-size: 0.9rem;">Warning: Manual mode disables automated safety protocols.</p>
+                
+                <div class="control-row">
+                    <span>OPERATING MODE</span>
+                    <button id="btn-mode" class="btn-toggle" onclick="toggleMode()">AUTO</button>
+                </div>
+
+                <div id="manual-panel" style="opacity: 0.5; pointer-events: none;">
+                    <div class="control-row">
+                        <span>Exhaust Fan</span>
+                        <button class="btn-toggle" id="btn-fan" onclick="toggleDevice('fan')">OFF</button>
+                    </div>
+                    <div class="control-row">
+                        <span>Irrigation Pump</span>
+                        <button class="btn-toggle" id="btn-pump" onclick="toggleDevice('pump')">OFF</button>
+                    </div>
+                    <div class="control-row">
+                        <span>Grow Lights</span>
+                        <button class="btn-toggle" id="btn-light" onclick="toggleDevice('light')">OFF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-auto" class="page">
+            <div class="card">
+                <h2>Threshold Config</h2>
+                <div class="input-group">
+                    <label>Max Temperature (°C)</label>
+                    <input type="number" id="set-temp" placeholder="e.g. 28">
+                </div>
+                <div class="input-group">
+                    <label>Min Soil Moisture (%)</label>
+                    <input type="number" id="set-soil" placeholder="e.g. 40">
+                </div>
+                <button class="btn-save" onclick="saveSettings()">UPDATE FIRMWARE</button>
+            </div>
+        </div>
+
+        </div>
+
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="switchTab('home', this)">
+            <span>🏠</span> HOME
+        </div>
+        <div class="nav-item" onclick="switchTab('manual', this)">
+            <span>🎛️</span> MANUAL
+        </div>
+        <div class="nav-item" onclick="switchTab('auto', this)">
+            <span>⚙️</span> CONFIG
+        </div>
+        <div class="nav-item" onclick="startGame()">
+            <span>🍓</span> SYNETHOS
+        </div>
+    </div>
+
+    <div id="game-ui">
+        <canvas id="gc"></canvas>
+        <div class="hud">
+            <div style="display:flex; justify-content:space-between;">
+                <span style="font-family:'Orbitron'; color:red;">SYNTHETOS (BIO-THREAT)</span>
+                <span id="score" style="font-family:'Orbitron';">SCORE: 0</span>
+            </div>
+            <div class="bar-container"><div class="bar-fill" id="boss-hp"></div></div>
+            <br>
+            <div class="bar-container" style="width: 200px; height: 10px;"><div class="bar-fill" id="player-hp"></div></div>
+        </div>
+
+        <div class="controls-layer">
+            <div class="touch-zone" id="joystick-zone"><div id="stick"></div></div>
+            <div id="btn-action">FIRE</div>
+        </div>
+
+        <div class="game-over-screen" id="go-screen">
+            <div class="glitch-text">SYSTEM FAILURE</div>
+            <p>The Greenhouse has been overrun.</p>
+            <button class="btn-save" style="width: 200px;" onclick="closeGame()">REBOOT SYSTEM</button>
         </div>
     </div>
 
     <script>
-        // --- IOT LOGIC ---
-        const socket = io("https://smart-greenhouse-h3ow.onrender.com"); // REPLACE WITH RENDER URL
-        
-        // Sensor Updates
-        socket.on('update_sensors', (data) => {
-            document.getElementById('dispTemp').innerText = data.temp.toFixed(1);
-            document.getElementById('dispHum').innerText = data.hum.toFixed(1);
-            document.getElementById('dispSoil1').innerText = data.soil1;
-            document.getElementById('dispSoil2').innerText = data.soil2;
-            document.getElementById('dispNPK').innerText = `${data.n}-${data.p}-${data.k}`;
+        // --- CONFIGURATION ---
+        // REPLACE WITH YOUR ACTUAL RENDER URL (No trailing slash!)
+        const SERVER_URL = "https://your-render-app-name.onrender.com"; 
+
+        // --- IOT SYSTEM ---
+        const socket = io(SERVER_URL, { transports: ['websocket', 'polling'] });
+        const els = {
+            temp: document.getElementById('val-temp'),
+            hum: document.getElementById('val-hum'),
+            soil: document.getElementById('val-soil'),
+            npk: document.getElementById('val-npk'),
+            cam: document.getElementById('camImg'),
+            dot: document.getElementById('dot'),
+            status: document.getElementById('connection-status')
+        };
+
+        // Connection Handling
+        socket.on('connect', () => {
+            els.dot.classList.add('connected');
+            els.status.innerText = "ONLINE";
         });
 
-        // Video Feed
-        socket.on('video_stream', (data) => {
-            document.getElementById('camFeed').src = "data:image/jpeg;base64," + data;
+        socket.on('disconnect', () => {
+            els.dot.classList.remove('connected');
+            els.status.innerText = "OFFLINE";
         });
 
-        // UI Logic
-        const vidCont = document.getElementById('vidCont');
-        vidCont.addEventListener('dblclick', () => {
-            vidCont.classList.toggle('enlarged');
+        // Data Reception
+        socket.on('sensor_data', (data) => {
+            if(data.temp) els.temp.innerText = data.temp.toFixed(1);
+            if(data.hum) els.hum.innerText = data.hum.toFixed(1);
+            // Handle Soil (Average of two sensors if available)
+            let s1 = data.soil1 || 0;
+            let s2 = data.soil2 || 0;
+            els.soil.innerText = Math.max(s1, s2); // Display wettest
+            // NPK
+            els.npk.innerText = `${data.n || 0}N - ${data.p || 0}P - ${data.k || 0}K`;
         });
 
-        const modeSwitch = document.getElementById('modeSwitch');
-        modeSwitch.addEventListener('change', (e) => {
-            const isManual = e.target.checked;
-            document.getElementById('modeText').innerText = isManual ? "MANUAL" : "AUTO";
-            const mc = document.getElementById('manualControls');
-            mc.style.display = isManual ? 'block' : 'none';
-            mc.style.opacity = isManual ? '1' : '0.5';
+        socket.on('video_frame', (b64) => {
+            els.cam.src = "data:image/jpeg;base64," + b64;
+        });
+
+        // --- UI NAVIGATION ---
+        function switchTab(viewId, navEl) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            // Show target
+            document.getElementById('view-' + viewId).classList.add('active');
             
-            socket.emit('send_command', { mode: isManual ? 'manual' : 'auto' });
-        });
-
-        function toggle(device) {
-            // Simple toggle logic would require tracking state, simplifying for brevity:
-            // In a real app, you'd toggle a variable and send boolean true/false
-            socket.emit('send_command', { [device]: true }); // Sending 'true' for now to turn on
+            // Update Nav
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            if(navEl) navEl.classList.add('active');
         }
 
-        // --- GAME LOGIC: BOSS BATTLE ---
-        const strawberry = document.getElementById('strawberry');
-        const gameLayer = document.getElementById('gameLayer');
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let gameLoopId;
+        // --- MANUAL CONTROLS ---
+        let isManual = false;
+        const manualPanel = document.getElementById('manual-panel');
+        const modeBtn = document.getElementById('btn-mode');
 
-        strawberry.addEventListener('dblclick', startGame);
-        document.getElementById('exitGame').addEventListener('click', stopGame);
+        function toggleMode() {
+            isManual = !isManual;
+            modeBtn.innerText = isManual ? "MANUAL" : "AUTO";
+            modeBtn.classList.toggle('active', isManual);
+            
+            manualPanel.style.opacity = isManual ? "1" : "0.5";
+            manualPanel.style.pointerEvents = isManual ? "auto" : "none";
+            
+            socket.emit('command', { mode: isManual ? 'manual' : 'auto' });
+        }
+
+        function toggleDevice(dev) {
+            if(!isManual) return;
+            const btn = document.getElementById('btn-' + dev);
+            const isActive = btn.classList.contains('active');
+            
+            // Toggle Visual
+            if(isActive) {
+                btn.classList.remove('active');
+                btn.innerText = "OFF";
+            } else {
+                btn.classList.add('active');
+                btn.innerText = "ON";
+            }
+            
+            // Send Command
+            socket.emit('command', { [dev]: !isActive });
+        }
+
+        function saveSettings() {
+            const t = document.getElementById('set-temp').value;
+            const s = document.getElementById('set-soil').value;
+            
+            if(t && s) {
+                socket.emit('command', { set_temp: t, set_soil: s });
+                alert("Thresholds uploaded to BioDome Controller.");
+            } else {
+                alert("Please fill all fields.");
+            }
+        }
+
+        // ============================================
+        // === PROJECT SYNTHETOS (GAME ENGINE) ===
+        // ============================================
+        const canvas = document.getElementById('gc');
+        const ctx = canvas.getContext('2d');
+        let gameRunning = false;
+        let animationId;
 
         // Game State
-        const player = { x: 0, y: 0, size: 20, speed: 5, color: '#39ff14', hp: 100, dashCd: 0, iframes: 0, bullets: [] };
-        const boss = { x: 0, y: 0, size: 60, color: 'red', hp: 1000, state: 'IDLE', timer: 0, projectiles: [] };
-        const keys = {};
-        let isMobile = /Android|iPhone/i.test(navigator.userAgent);
+        const game = {
+            width: 0, height: 0,
+            player: { x: 0, y: 0, r: 15, hp: 100, speed: 6, color: '#39ff14', bullets: [] },
+            boss: { x: 0, y: 0, r: 50, hp: 1000, maxHp: 1000, color: 'red', phase: 1, timer: 0, projectiles: [] },
+            particles: []
+        };
+
+        // Joystick Logic (Failsafe for ghost touches)
+        const joystick = { active: false, id: null, dx: 0, dy: 0, originX: 0, originY: 0 };
+        const joyZone = document.getElementById('joystick-zone');
+        const stick = document.getElementById('stick');
+
+        joyZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            joystick.id = touch.identifier;
+            joystick.active = true;
+            joystick.originX = touch.clientX;
+            joystick.originY = touch.clientY;
+            
+            // Snap stick to finger initially
+            stick.style.transition = 'none';
+        });
+
+        joyZone.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for(let i=0; i<e.changedTouches.length; i++) {
+                if(e.changedTouches[i].identifier === joystick.id) {
+                    const t = e.changedTouches[i];
+                    let dx = t.clientX - joystick.originX;
+                    let dy = t.clientY - joystick.originY;
+                    
+                    // Clamp
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const max = 40;
+                    if(dist > max) {
+                        dx = (dx/dist) * max;
+                        dy = (dy/dist) * max;
+                    }
+                    
+                    joystick.dx = dx / max; // Normalized -1 to 1
+                    joystick.dy = dy / max;
+                    
+                    stick.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+                }
+            }
+        });
+
+        const resetJoystick = () => {
+            joystick.active = false;
+            joystick.id = null;
+            joystick.dx = 0; joystick.dy = 0;
+            stick.style.transition = '0.2s';
+            stick.style.transform = `translate(-50%, -50%)`;
+        };
+        joyZone.addEventListener('touchend', resetJoystick);
+
+        // Shooting
+        document.getElementById('btn-action').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if(gameRunning) spawnBullet();
+        });
 
         function startGame() {
-            document.getElementById('dashboard').style.display = 'none';
-            gameLayer.style.display = 'block';
-            if(isMobile) document.getElementById('mobCtrl').style.display = 'block';
-            resize();
-            resetGame();
-            gameLoopId = requestAnimationFrame(update);
+            document.getElementById('game-ui').style.display = 'block';
+            document.querySelector('.nav-bar').style.display = 'none';
+            resizeGame();
+            
+            // Reset Stats
+            game.player.hp = 100;
+            game.player.x = game.width / 2;
+            game.player.y = game.height - 100;
+            
+            game.boss.hp = 1000;
+            game.boss.projectiles = [];
+            game.player.bullets = [];
+            game.particles = [];
+            
+            gameRunning = true;
+            document.getElementById('go-screen').style.display = 'none';
+            loop();
         }
 
-        function stopGame() {
-            cancelAnimationFrame(gameLoopId);
-            gameLayer.style.display = 'none';
-            document.getElementById('dashboard').style.display = 'flex';
+        function closeGame() {
+            gameRunning = false;
+            cancelAnimationFrame(animationId);
+            document.getElementById('game-ui').style.display = 'none';
+            document.querySelector('.nav-bar').style.display = 'flex';
         }
 
-        function resetGame() {
-            player.x = canvas.width / 2;
-            player.y = canvas.height - 100;
-            player.hp = 100;
-            boss.x = canvas.width / 2;
-            boss.y = 100;
-            boss.hp = 1000;
-            boss.projectiles = [];
+        function resizeGame() {
+            game.width = window.innerWidth;
+            game.height = window.innerHeight;
+            canvas.width = game.width;
+            canvas.height = game.height;
         }
 
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize);
-
-        // Input
-        window.addEventListener('keydown', e => keys[e.code] = true);
-        window.addEventListener('keyup', e => keys[e.code] = false);
-
-        // Mobile Input Placeholders
-        document.getElementById('btnShoot').addEventListener('touchstart', () => shoot());
-        document.getElementById('btnDash').addEventListener('touchstart', () => dash());
-
-        function shoot() {
-            player.bullets.push({x: player.x, y: player.y, vx: 0, vy: -10});
+        function spawnBullet() {
+            game.player.bullets.push({ x: game.player.x, y: game.player.y, vx: 0, vy: -15 });
         }
 
-        function dash() {
-            if (player.dashCd <= 0) {
-                player.iframes = 30;
-                player.dashCd = 100;
-                // Add velocity burst logic here
+        function loop() {
+            if(!gameRunning) return;
+            
+            // Clear
+            ctx.fillStyle = 'rgba(0,0,0,0.2)'; // Trails
+            ctx.fillRect(0,0, game.width, game.height);
+            
+            // --- PLAYER ---
+            if(joystick.active) {
+                game.player.x += joystick.dx * game.player.speed;
+                game.player.y += joystick.dy * game.player.speed;
             }
-        }
+            // Clamp Player
+            game.player.x = Math.max(15, Math.min(game.width-15, game.player.x));
+            game.player.y = Math.max(15, Math.min(game.height-15, game.player.y));
 
-        function update() {
-            ctx.fillStyle = '#111';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Draw Player
+            ctx.shadowBlur = 10; ctx.shadowColor = game.player.color;
+            ctx.fillStyle = game.player.color;
+            ctx.beginPath(); ctx.arc(game.player.x, game.player.y, game.player.r, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
 
-            // --- Player Logic ---
-            if (keys['ArrowUp'] || keys['KeyW']) player.y -= player.speed;
-            if (keys['ArrowDown'] || keys['KeyS']) player.y += player.speed;
-            if (keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
-            if (keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
-            if ((keys['Space'] || keys['KeyK']) && player.dashCd === 0) dash(); // Simple dash trigger
-            if (keys['KeyJ'] && Math.random() > 0.8) shoot(); // Auto fire for PC test
-
-            // Player Render
-            ctx.fillStyle = player.iframes > 0 ? 'white' : player.color;
-            ctx.beginPath(); ctx.arc(player.x, player.y, player.size, 0, Math.PI*2); ctx.fill();
-
-            // Bullets
-            ctx.fillStyle = 'yellow';
-            player.bullets.forEach((b, i) => {
+            // --- PLAYER BULLETS ---
+            ctx.fillStyle = '#ffff00';
+            for(let i = game.player.bullets.length-1; i>=0; i--) {
+                let b = game.player.bullets[i];
                 b.y += b.vy;
-                ctx.fillRect(b.x-2, b.y-2, 4, 10);
-                if(b.y < 0) player.bullets.splice(i, 1);
+                ctx.fillRect(b.x-2, b.y-5, 4, 10);
                 
-                // Hit Boss
-                const dx = b.x - boss.x;
-                const dy = b.y - boss.y;
-                if (Math.sqrt(dx*dx + dy*dy) < boss.size) {
-                    boss.hp -= 5;
-                    player.bullets.splice(i, 1);
+                // Collision Boss
+                let dx = b.x - game.boss.x;
+                let dy = b.y - game.boss.y;
+                if(Math.sqrt(dx*dx + dy*dy) < game.boss.r) {
+                    game.boss.hp -= 10;
+                    game.player.bullets.splice(i, 1);
+                    // Spawn particle
+                    game.particles.push({x: b.x, y: b.y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, life: 10});
+                } else if (b.y < 0) {
+                    game.player.bullets.splice(i, 1);
                 }
-            });
+            }
 
-            // --- Boss AI: Synthetos ---
-            // Boss Render
-            ctx.fillStyle = boss.color;
+            // --- BOSS ---
+            game.boss.timer++;
+            game.boss.x = (game.width/2) + Math.sin(game.boss.timer * 0.02) * 100;
+            game.boss.y = 100 + Math.cos(game.boss.timer * 0.05) * 20;
+
+            // Boss Attacks (AI)
+            if(game.boss.timer % 40 === 0) {
+                // Phase 1: Spread
+                if(game.boss.hp > 500) {
+                    game.boss.projectiles.push({x: game.boss.x, y: game.boss.y, vx: -2, vy: 5});
+                    game.boss.projectiles.push({x: game.boss.x, y: game.boss.y, vx: 2, vy: 5});
+                    game.boss.projectiles.push({x: game.boss.x, y: game.boss.y, vx: 0, vy: 6});
+                } 
+                // Phase 2: Aimed Stream
+                else {
+                    let angle = Math.atan2(game.player.y - game.boss.y, game.player.x - game.boss.x);
+                    game.boss.projectiles.push({
+                        x: game.boss.x, y: game.boss.y,
+                        vx: Math.cos(angle)*8, vy: Math.sin(angle)*8
+                    });
+                }
+            }
+
+            // Draw Boss
+            ctx.shadowBlur = 20; ctx.shadowColor = 'red';
+            ctx.fillStyle = game.boss.hp > 500 ? 'red' : 'purple';
             ctx.beginPath(); 
-            // Draw Boss (Triangle shape for now)
-            ctx.moveTo(boss.x, boss.y - boss.size);
-            ctx.lineTo(boss.x - boss.size, boss.y + boss.size);
-            ctx.lineTo(boss.x + boss.size, boss.y + boss.size);
+            // Triangle shape
+            ctx.moveTo(game.boss.x, game.boss.y + game.boss.r);
+            ctx.lineTo(game.boss.x - game.boss.r, game.boss.y - game.boss.r);
+            ctx.lineTo(game.boss.x + game.boss.r, game.boss.y - game.boss.r);
             ctx.fill();
+            ctx.shadowBlur = 0;
 
-            // Boss Name
-            ctx.fillStyle = "white";
-            ctx.font = "20px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText("SYNTHETOS THE OVERGROWN", boss.x, boss.y - boss.size - 20);
+            // --- BOSS PROJECTILES ---
+            ctx.fillStyle = '#ff0055';
+            for(let i = game.boss.projectiles.length-1; i>=0; i--) {
+                let p = game.boss.projectiles[i];
+                p.x += p.vx; p.y += p.vy;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
 
-            // Boss Logic (Simple State Machine)
-            boss.timer++;
-            if (boss.timer % 60 === 0) {
-                // Pick attack
-                const rand = Math.random();
-                if (rand < 0.3) fireBossProjectile_Spread();
-                else if (rand < 0.6) fireBossProjectile_Aimed();
-                else boss.x += (Math.random() - 0.5) * 100; // Move
-            }
-
-            // Boss Projectiles
-            ctx.fillStyle = 'orange';
-            boss.projectiles.forEach((p, i) => {
-                p.x += p.vx;
-                p.y += p.vy;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI*2); ctx.fill();
-                
                 // Hit Player
-                const pdx = p.x - player.x;
-                const pdy = p.y - player.y;
-                if (Math.sqrt(pdx*pdx + pdy*pdy) < player.size && player.iframes <= 0) {
-                    player.hp -= 10;
-                    player.iframes = 20; // Hit immunity
-                    boss.projectiles.splice(i, 1);
+                let dx = p.x - game.player.x;
+                let dy = p.y - game.player.y;
+                if(Math.sqrt(dx*dx + dy*dy) < game.player.r + 5) {
+                    game.player.hp -= 10;
+                    game.boss.projectiles.splice(i, 1);
                 }
                 
-                if (p.y > canvas.height || p.y < 0 || p.x < 0 || p.x > canvas.width) boss.projectiles.splice(i, 1);
-            });
-
-            // Update UI Bars
-            document.getElementById('bossHealthFill').style.width = (boss.hp / 1000 * 100) + "%";
-            document.getElementById('playerHealthFill').style.width = player.hp + "%";
-
-            // Cooldowns
-            if (player.dashCd > 0) player.dashCd--;
-            if (player.iframes > 0) player.iframes--;
-
-            gameLoopId = requestAnimationFrame(update);
-        }
-
-        function fireBossProjectile_Spread() {
-            for(let i=-2; i<=2; i++) {
-                boss.projectiles.push({x: boss.x, y: boss.y, vx: i*2, vy: 5});
+                if(p.y > game.height || p.x < 0 || p.x > game.width) game.boss.projectiles.splice(i, 1);
             }
-        }
 
-        function fireBossProjectile_Aimed() {
-            const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
-            boss.projectiles.push({
-                x: boss.x, y: boss.y,
-                vx: Math.cos(angle) * 7,
-                vy: Math.sin(angle) * 7
-            });
+            // Particles
+            ctx.fillStyle = 'white';
+            for(let i=game.particles.length-1; i>=0; i--) {
+                let pt = game.particles[i];
+                pt.x += pt.vx; pt.y += pt.vy;
+                pt.life--;
+                ctx.fillRect(pt.x, pt.y, 2, 2);
+                if(pt.life <= 0) game.particles.splice(i,1);
+            }
+
+            // Update UI
+            document.getElementById('boss-hp').style.width = (game.boss.hp / 1000 * 100) + "%";
+            document.getElementById('player-hp').style.width = game.player.hp + "%";
+
+            // Win/Loss
+            if(game.player.hp <= 0) {
+                document.getElementById('go-screen').style.display = 'flex';
+                gameRunning = false;
+            }
+            if(game.boss.hp <= 0) {
+                alert("SYNETHOS NEUTRALIZED. Greenhouse Safe.");
+                closeGame();
+            }
+
+            animationId = requestAnimationFrame(loop);
         }
 
     </script>
