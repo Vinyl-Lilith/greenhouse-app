@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BioDome OS v5.0 | Advanced Security & Control</title>
+    <title>BioDome OS v5.0 | Pro Security & Control</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
     
@@ -14,469 +14,578 @@
             --green: #39ff14;
             --yellow: #ffd700;
             --dark-bg: #020205;
-            --panel-bg: rgba(10, 10, 20, 0.95);
-            --border-glow: 0 0 10px rgba(0, 243, 255, 0.2);
+            --panel-bg: rgba(10, 10, 15, 0.98);
+            --border-glow: 0 0 15px rgba(0, 243, 255, 0.2);
         }
 
-        /* --- GLOBAL RESET & THEME --- */
+        /* --- GLOBAL UI FRAMEWORK --- */
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
         body {
-            font-family: 'Rajdhani', sans-serif; background: var(--dark-bg); color: white;
+            font-family: 'Rajdhani', sans-serif; background-color: var(--dark-bg); color: white;
             margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column;
+            background-image: radial-gradient(circle at center, #0a0a1a 0%, #000 100%);
         }
 
-        /* --- HEADER & STATUS --- */
         .status-bar {
-            height: 60px; display: flex; justify-content: space-between; align-items: center;
-            padding: 0 20px; background: #000; border-bottom: 2px solid #111; z-index: 1000;
+            height: 65px; display: flex; justify-content: space-between; align-items: center;
+            padding: 0 25px; background: #000; border-bottom: 2px solid #111; z-index: 1000;
         }
-        .brand { font-family: 'Orbitron'; font-weight: 900; color: var(--cyan); letter-spacing: 2px; }
-        .sys-info { display: flex; align-items: center; gap: 15px; font-size: 0.7rem; font-weight: 700; color: #555; }
-        .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff0055; transition: 0.3s; }
-        .conn-dot.online { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        .brand { font-family: 'Orbitron'; font-weight: 900; color: var(--cyan); letter-spacing: 3px; text-shadow: var(--border-glow); }
+        .conn-stat { display: flex; align-items: center; gap: 12px; font-size: 0.7rem; font-weight: 800; color: #555; }
+        .dot { width: 8px; height: 8px; background: var(--pink); border-radius: 50%; transition: 0.3s; }
+        .dot.active { background: var(--green); box-shadow: 0 0 10px var(--green); }
 
-        /* --- VIEWPORT LOGIC --- */
-        #app-viewport { flex: 1; position: relative; overflow-y: auto; padding-bottom: 100px; }
-        .page { display: none; padding: 20px; max-width: 900px; margin: 0 auto; animation: pageIn 0.4s ease; }
+        #app-viewport { flex: 1; position: relative; overflow-y: auto; padding-bottom: 100px; scroll-behavior: smooth; }
+        .page { display: none; padding: 25px; max-width: 1000px; margin: 0 auto; animation: slideUp 0.4s ease-out; }
         .page.active { display: block; }
-        @keyframes pageIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- CARDS & HELP SYSTEM --- */
+        /* --- CARDS & PANELS --- */
         .card {
             background: var(--panel-bg); border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px; padding: 25px; margin-bottom: 20px; position: relative;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            border-left: 4px solid var(--cyan); border-radius: 12px; padding: 30px;
+            margin-bottom: 25px; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.8);
         }
-        .card h2 { margin: 0 0 15px 0; font-family: 'Orbitron'; font-size: 0.85rem; color: #aaa; letter-spacing: 1px; }
-        
-        .help-btn {
-            position: absolute; top: 20px; right: 20px; width: 22px; height: 22px;
-            border: 1px solid var(--cyan); color: var(--cyan); border-radius: 50%;
-            text-align: center; line-height: 20px; font-size: 0.7rem; cursor: pointer; transition: 0.2s;
-        }
-        .help-btn:hover { background: var(--cyan); color: #000; }
+        h2 { margin: 0 0 20px 0; font-family: 'Orbitron'; font-size: 0.9rem; color: #eee; text-transform: uppercase; border-bottom: 1px solid #222; padding-bottom: 12px; }
 
-        /* --- CAMERA & FAILSAFES --- */
-        .cam-frame {
-            width: 100%; height: 250px; background: #000; border-radius: 8px;
-            overflow: hidden; position: relative; border: 1px solid #222; cursor: zoom-in;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        .help-trigger {
+            position: absolute; top: 20px; right: 20px; width: 24px; height: 24px;
+            border: 1px solid #444; border-radius: 50%; text-align: center; line-height: 22px;
+            font-size: 0.75rem; color: #888; cursor: pointer; transition: 0.3s;
         }
-        .cam-frame.expanded {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 9999; border-radius: 0;
-        }
-        .cam-img {
-            width: 100%; height: 100%; object-fit: cover;
-            transform: rotate(180deg); /* PHYSICAL CAMERA CORRECTION */
-        }
+        .help-trigger:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
 
-        /* --- SENSOR INTERFACE --- */
-        .sensor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .sensor-box { background: rgba(255,255,255,0.02); padding: 20px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.04); }
-        .s-val { display: block; font-family: 'Orbitron'; font-size: 1.8rem; color: #fff; margin-bottom: 4px; }
-        .s-lbl { font-size: 0.65rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; }
+        /* --- CAMERA SYSTEM --- */
+        .cam-container {
+            width: 100%; height: 280px; background: #050505; border-radius: 8px;
+            overflow: hidden; position: relative; cursor: zoom-in; border: 1px solid #1a1a1a;
+            transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cam-container.expanded { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; border-radius: 0; }
+        .cam-feed { width: 100%; height: 100%; object-fit: cover; transform: rotate(180deg); }
+        .overlay-tag { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 5px 12px; border-radius: 4px; font-size: 0.65rem; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .rec-pulse { width: 6px; height: 6px; background: var(--pink); border-radius: 50%; animation: blink 1s infinite; }
 
-        /* --- CONTROL BUTTONS --- */
-        .ctrl-row {
-            display: flex; justify-content: space-between; align-items: center;
-            background: rgba(255,255,255,0.03); padding: 15px; border-radius: 6px; margin-bottom: 10px;
+        /* --- SENSOR TELEMETRY --- */
+        .telemetry-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .sensor-card { background: rgba(255,255,255,0.02); padding: 25px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.04); }
+        .s-lbl { font-size: 0.7rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 2px; display: block; margin-bottom: 10px; }
+        .s-val { font-family: 'Orbitron'; font-size: 2.2rem; font-weight: 700; color: #fff; }
+
+        /* --- OVERRIDE CONTROLS --- */
+        .ctrl-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 18px; border-radius: 8px; margin-bottom: 12px; }
+        .toggle-btn {
+            background: #111; color: #555; border: 1px solid #333; padding: 12px 30px;
+            font-family: 'Orbitron'; font-weight: 700; border-radius: 4px; cursor: pointer; transition: 0.3s;
         }
-        .btn-toggle {
-            padding: 10px 25px; font-family: 'Orbitron'; border: 1px solid #444; background: #111;
-            color: #555; border-radius: 4px; cursor: pointer; transition: 0.3s;
-        }
-        .btn-toggle.on { background: var(--cyan); color: #000; border-color: var(--cyan); box-shadow: 0 0 15px rgba(0,243,255,0.3); }
-        .mode-btn { border-color: var(--pink); color: var(--pink); background: transparent; }
+        .toggle-btn.active { background: var(--cyan); color: #000; border-color: var(--cyan); box-shadow: 0 0 15px rgba(0,243,255,0.4); }
+        .mode-btn { background: transparent; border-color: var(--pink); color: var(--pink); width: 100%; margin-bottom: 20px; font-size: 1rem; }
         .mode-btn.manual { background: var(--pink); color: #fff; }
 
-        /* --- INPUT FIELDS & ERROR HANDLING --- */
-        .field { margin-bottom: 15px; }
-        .field label { display: block; font-size: 0.7rem; color: #777; margin-bottom: 5px; text-transform: uppercase; }
-        .field input {
-            width: 100%; background: #000; border: 1px solid #333; color: white;
-            padding: 12px; font-family: 'Orbitron'; border-radius: 4px; transition: 0.3s;
+        /* --- CONFIGURATION & FAILSAFES --- */
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; color: #888; font-size: 0.7rem; font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px; }
+        .input-group input {
+            width: 100%; background: #000; border: 1px solid #333; color: white; padding: 15px;
+            font-family: 'Orbitron'; border-radius: 6px; font-size: 1.1rem; transition: 0.3s;
         }
-        .field input:focus { border-color: var(--cyan); }
-        .btn-save {
-            width: 100%; padding: 16px; background: var(--green); color: #000;
-            border: none; font-family: 'Orbitron'; font-weight: 900; border-radius: 4px; cursor: pointer;
-        }
+        .input-group input:focus { border-color: var(--cyan); background: #050505; }
+        .btn-update { width: 100%; padding: 20px; background: var(--green); color: #000; border: none; font-family: 'Orbitron'; font-weight: 900; border-radius: 6px; cursor: pointer; letter-spacing: 2px; }
 
         /* --- NAVIGATION --- */
-        .nav-dock {
-            position: fixed; bottom: 0; width: 100%; height: 80px;
-            background: #050508; border-top: 1px solid #111;
-            display: flex; justify-content: space-around; align-items: center; z-index: 1000;
-        }
-        .nav-item { color: #444; text-align: center; cursor: pointer; transition: 0.2s; flex: 1; }
-        .nav-item.active { color: var(--cyan); }
-        .nav-item i { font-size: 1.5rem; display: block; margin-bottom: 4px; }
-        .nav-item span { font-size: 0.6rem; font-weight: 700; letter-spacing: 1px; }
+        .nav-dock { position: fixed; bottom: 0; left: 0; right: 0; height: 90px; background: #050508; border-top: 1px solid #111; display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+        .nav-item { color: #444; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; flex: 1; }
+        .nav-item i { font-size: 1.6rem; margin-bottom: 6px; }
+        .nav-item span { font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; }
+        .nav-item.active { color: var(--cyan); transform: translateY(-5px); }
 
-        /* --- MINIGAME LAYER --- */
-        #game-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; display: none; }
+        /* --- PRO GAME ENGINE HUD --- */
+        #game-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; display: none; }
         #canvas { display: block; width: 100%; height: 100%; }
+        .game-hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 30px; }
         
-        .game-hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .hud-pause {
-            position: absolute; top: 25px; left: 25px; width: 50px; height: 50px;
-            background: rgba(0,0,0,0.6); border: 2px solid var(--cyan); color: var(--cyan);
-            border-radius: 50%; pointer-events: auto; display: flex; align-items: center; justify-content: center;
-            font-family: 'Orbitron'; cursor: pointer;
+        .hud-stats { display: flex; justify-content: space-between; align-items: flex-start; }
+        .hp-container { width: 250px; background: rgba(0,0,0,0.6); border: 1px solid #333; padding: 4px; }
+        .hp-fill { height: 12px; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .hp-lbl { font-family: 'Orbitron'; font-size: 0.75rem; margin-bottom: 6px; font-weight: 900; }
+        
+        .pause-btn { 
+            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+            width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--cyan); 
+            color: var(--cyan); background: rgba(0,0,0,0.4); display: flex; align-items: center; 
+            justify-content: center; pointer-events: auto; cursor: pointer; font-family: 'Orbitron';
         }
 
-        /* Boss Intro Overlay */
-        #boss-intro {
-            position: fixed; top:0; left:0; width:100%; height:100%; 
-            background: rgba(0,0,0,0.9); display:none; flex-direction:column;
-            align-items:center; justify-content:center; text-align:center; z-index: 6000;
+        .game-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.94); z-index: 100; display: flex; 
+            flex-direction: column; align-items: center; justify-content: center; text-align: center;
         }
-        .alert-text { font-family: 'Orbitron'; color: var(--pink); font-size: 3rem; animation: blink 0.5s infinite; }
+
+        /* --- MOBILE JOYSTICK --- */
+        .mobile-controls { position: absolute; bottom: 40px; left: 0; width: 100%; height: 180px; display: none; justify-content: space-between; padding: 0 50px; pointer-events: none; }
+        .joy-base { width: 140px; height: 140px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 50%; position: relative; pointer-events: auto; }
+        .joy-stick { width: 60px; height: 60px; background: var(--cyan); opacity: 0.5; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .btn-action { width: 100px; height: 100px; border-radius: 50%; background: rgba(255,0,85,0.1); border: 2px solid var(--pink); color: var(--pink); font-family: 'Orbitron'; font-weight: 900; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
+
         @keyframes blink { 50% { opacity: 0; } }
-
-        /* Failsafe Local Notification */
-        #sys-msg {
-            position: fixed; top: 20px; right: 20px; background: var(--pink);
-            padding: 10px 20px; border-radius: 4px; font-weight: 700; font-size: 0.8rem;
-            transform: translateX(200%); transition: 0.4s; z-index: 10000;
-        }
     </style>
 </head>
 <body>
 
-    <div id="sys-msg">FAILSAFE ACTIVATED</div>
-
     <div class="status-bar">
         <div class="brand">BIODOME OS v5.0</div>
-        <div class="sys-info">
-            <span id="conn-lbl">OFFLINE</span>
-            <div id="conn-dot" class="conn-dot"></div>
+        <div class="conn-stat">
+            <span id="conn-text">UPLINK OFFLINE</span>
+            <div id="conn-dot" class="dot"></div>
         </div>
     </div>
 
     <div id="app-viewport">
-        <div id="p-home" class="page active">
+        <div id="page-home" class="page active">
             <div class="card">
-                <div class="help-btn" onclick="ui.help('home')">?</div>
-                <h2>SURVEILLANCE MODE</h2>
-                <div class="cam-frame" id="cam-box" ondblclick="ui.zoomCam()">
-                    <img id="stream" class="cam-img" src="" alt="NO SIGNAL">
-                    <div style="position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.5); font-size:0.6rem; padding:3px 8px; border-radius:3px;">HD FEED</div>
+                <div class="help-trigger" onclick="ui.showHelp('home')">?</div>
+                <h2>LIVE SURVEILLANCE FEED</h2>
+                <div class="cam-container" id="main-cam" ondblclick="ui.toggleZoom()">
+                    <div class="overlay-tag"><div class="rec-pulse"></div> SECURE LINK ACTIVE</div>
+                    <img id="cam-img" class="cam-feed" src="" alt="WAITING FOR VIDEO STREAM...">
                 </div>
-                <p style="font-size: 0.6rem; color: #444; margin-top: 8px;">Physical Camera: 180° Rotated | Logic: Compensated</p>
+                <p style="font-size: 0.65rem; color: #555; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;">Hardware correction: 180° Inversion Active | Double-tap for focus</p>
             </div>
 
-            <div class="sensor-grid">
-                <div class="sensor-box"><span class="s-val" id="v-temp">--°</span><span class="s-lbl">Air Temp</span></div>
-                <div class="sensor-box"><span class="s-val" id="v-hum">--%</span><span class="s-lbl">Humidity</span></div>
-                <div class="sensor-box" style="grid-column: span 2;">
-                    <span class="s-val" id="v-soil">--%</span><span class="s-lbl">Avg Soil Moisture</span>
+            <div class="telemetry-grid">
+                <div class="sensor-card"><span class="s-lbl">Ambient Air Temp</span><span class="s-val"><span id="v-temp">--</span>°C</span></div>
+                <div class="sensor-card"><span class="s-lbl">Relative Humidity</span><span class="s-val"><span id="v-hum">--</span>%</span></div>
+                <div class="sensor-card" style="grid-column: span 2;">
+                    <span class="s-lbl">Soil Moisture Levels (Avg)</span>
+                    <span class="s-val"><span id="v-soil">--</span>%</span>
                 </div>
-                <div class="sensor-box" style="grid-column: span 2;">
-                    <div id="v-npk" style="font-family:'Orbitron'; font-size: 1.2rem; margin-bottom: 5px;">-- | -- | --</div>
-                    <span class="s-lbl">Current N-P-K Levels</span>
+                <div class="sensor-card" style="grid-column: span 2;">
+                    <span class="s-lbl">NPK Concentration (mg/kg)</span>
+                    <div id="v-npk" style="font-family:'Orbitron'; font-size: 1.5rem; letter-spacing: 4px; margin-top: 5px;">-- | -- | --</div>
                 </div>
             </div>
         </div>
 
-        <div id="p-manual" class="page">
+        <div id="page-manual" class="page">
             <div class="card">
-                <div class="help-btn" onclick="ui.help('manual')">?</div>
-                <h2>OVERRIDE SYSTEM</h2>
-                <div class="ctrl-row">
-                    <span>PILOT MODE:</span>
-                    <button id="mode-sel" class="btn-toggle mode-btn" onclick="iot.toggleMode()">AUTO</button>
-                </div>
+                <div class="help-trigger" onclick="ui.showHelp('manual')">?</div>
+                <h2>HARDWARE OVERRIDE</h2>
+                <button id="mode-selector" class="toggle-btn mode-btn" onclick="iot.switchMode()">SYSTEM MODE: AUTO</button>
                 
-                <div id="man-grid" style="opacity: 0.3; pointer-events: none; transition: 0.3s;">
-                    <div class="ctrl-row"><span>Exhaust Fan</span><button class="btn-toggle" id="b-exhaust" onclick="iot.relay('exhaust')">OFF</button></div>
-                    <div class="ctrl-row"><span>Cooling Array</span><button class="btn-toggle" id="b-peltier" onclick="iot.relay('peltier')">OFF</button></div>
-                    <div class="ctrl-row"><span>Irrigation</span><button class="btn-toggle" id="b-pump_w" onclick="iot.relay('pump_w')">OFF</button></div>
-                    <div class="ctrl-row"><span>Nutrients</span><button class="btn-toggle" id="b-pump_n" onclick="iot.relay('pump_n')">OFF</button></div>
+                <div id="manual-panel" style="opacity: 0.3; pointer-events: none; transition: 0.4s;">
+                    <div class="ctrl-row"><span>Exhaust Fan Unit</span><button id="ctrl-exhaust" class="toggle-btn" onclick="iot.toggleRelay('exhaust')">OFF</button></div>
+                    <div class="ctrl-row"><span>Peltier Cooling Array</span><button id="ctrl-peltier" class="toggle-btn" onclick="iot.toggleRelay('peltier')">OFF</button></div>
+                    <div class="ctrl-row"><span>Water Irrigation Pump</span><button id="ctrl-pump_w" class="toggle-btn" onclick="iot.toggleRelay('pump_w')">OFF</button></div>
+                    <div class="ctrl-row"><span>Nutrient Injector Pump</span><button id="ctrl-pump_n" class="toggle-btn" onclick="iot.toggleRelay('pump_n')">OFF</button></div>
                 </div>
             </div>
         </div>
 
-        <div id="p-config" class="page">
+        <div id="page-config" class="page">
             <div class="card">
-                <div class="help-btn" onclick="ui.help('config')">?</div>
-                <h2>BIOS TARGETS</h2>
-                <div class="field">
-                    <label>Target Temperature (°C)</label>
-                    <input type="number" id="t-temp" value="25">
+                <div class="help-trigger" onclick="ui.showHelp('config')">?</div>
+                <h2>BIOLOGICAL LOGIC TARGETS</h2>
+                <div class="input-group">
+                    <label>TARGET TEMPERATURE (°C)</label>
+                    <input type="number" id="set-temp" placeholder="25.0">
                 </div>
-                <div class="field">
-                    <label>Min Soil Moisture (%)</label>
-                    <input type="number" id="t-soil" value="45">
+                <div class="input-group">
+                    <label>MINIMUM SOIL MOISTURE (%)</label>
+                    <input type="number" id="set-soil" placeholder="40">
                 </div>
-                <div class="field">
-                    <label>Target NPK Threshold</label>
-                    <input type="number" id="t-npk" value="180">
+                <div class="input-group">
+                    <label>NPK COMBINED THRESHOLD (mg/kg)</label>
+                    <input type="number" id="set-npk" placeholder="180">
                 </div>
-                <button class="btn-save" onclick="iot.saveConfig()">SYNC TO BIODOME</button>
+                <button class="btn-update" onclick="iot.saveConfig()">SAVE TO FIRMWARE</button>
+                <p style="font-size: 0.6rem; color: #555; margin-top: 15px; font-weight: 700;">PRO-SHIELD: Inputs are sanitized for biological safety before transmission.</p>
             </div>
-        </div>
-    </div>
-
-    <div id="game-layer">
-        <canvas id="canvas"></canvas>
-        <div class="game-hud">
-            <div class="hud-pause" onclick="game.pause()">II</div>
-            
-            <div style="position:absolute; bottom:20px; left:20px; width:200px;">
-                <div style="font-size:0.6rem; color:var(--cyan); font-family:'Orbitron';">DRONE SHIELDS</div>
-                <div style="width:100%; height:10px; background:#111; border:1px solid #333;"><div id="hp-p" style="width:100%; height:100%; background:var(--cyan);"></div></div>
-            </div>
-            <div style="position:absolute; bottom:20px; right:20px; width:200px; text-align:right;">
-                <div style="font-size:0.6rem; color:var(--pink); font-family:'Orbitron';">SYNTHETOS CORE</div>
-                <div style="width:100%; height:10px; background:#111; border:1px solid #333;"><div id="hp-b" style="width:100%; height:100%; background:var(--pink);"></div></div>
-            </div>
-        </div>
-
-        <div id="boss-intro">
-            <div class="alert-text">WARNING</div>
-            <p style="font-family:'Orbitron'; color:white; letter-spacing:5px;">SYNTHETOS AWAKENING</p>
-            <p style="color:#666; font-size: 0.8rem; margin-top: 20px;">BIOLOGICAL INFESTATION IN SECTOR 7</p>
-        </div>
-
-        <div id="game-menu" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-            <h1 style="font-family:'Orbitron'; font-size: 3rem; color: var(--pink);">THREAT DETECTED</h1>
-            <p style="color:#888; max-width: 400px; margin-bottom: 30px;">Deploy tactical drone to sanitize the greenhouse from rogue mutations.</p>
-            <button class="btn-save" style="width:200px;" onclick="game.start()">LAUNCH DRONE</button>
-            <button class="btn-save" style="width:200px; margin-top:10px; background:#222; color:#555;" onclick="game.exit()">EXIT</button>
         </div>
     </div>
 
     <nav class="nav-dock">
-        <div class="nav-item active" onclick="ui.tab('home', this)"><i>🏠</i><span>HOME</span></div>
-        <div class="nav-item" onclick="ui.tab('manual', this)"><i>🎛️</i><span>MANUAL</span></div>
-        <div class="nav-item" onclick="ui.tab('config', this)"><i>⚙️</i><span>CONFIG</span></div>
-        <div class="nav-item" onclick="game.open()" style="color:var(--pink);"><i>👾</i><span>THREAT</span></div>
+        <div class="nav-item active" onclick="ui.changePage('home', this)"><i>🏠</i><span>HOME</span></div>
+        <div class="nav-item" onclick="ui.changePage('manual', this)"><i>🎛️</i><span>MANUAL</span></div>
+        <div class="nav-item" onclick="ui.changePage('config', this)"><i>⚙️</i><span>CONFIG</span></div>
+        <div class="nav-item" onclick="game.init()" style="color: var(--pink);"><i>👾</i><span>THREAT</span></div>
     </nav>
 
+    <div id="game-view">
+        <canvas id="canvas"></canvas>
+        <div class="game-hud" id="hud" style="display:none;">
+            <div class="hud-stats">
+                <div>
+                    <div class="hp-lbl" style="color: var(--cyan);">DRONE INTEGRITY</div>
+                    <div class="hp-container"><div id="hp-player" class="hp-fill" style="background: var(--cyan); width: 100%;"></div></div>
+                </div>
+                <div class="pause-btn" onclick="game.togglePause()">II</div>
+                <div style="text-align: right;">
+                    <div class="hp-lbl" style="color: var(--pink);">SYNTHETOS CORE</div>
+                    <div class="hp-container"><div id="hp-boss" class="hp-fill" style="background: var(--pink); width: 100%;"></div></div>
+                </div>
+            </div>
+
+            <div class="mobile-controls" id="m-ctrls">
+                <div class="joy-base" id="j-base"><div class="joy-stick" id="j-stick"></div></div>
+                <div style="display:flex; gap: 15px; align-items: flex-end;">
+                    <div class="btn-action" id="b-dash" style="border-color: var(--yellow); color: var(--yellow);">DASH</div>
+                    <div class="btn-action" id="b-fire" style="width: 110px; height: 110px;">FIRE</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="menu-start" class="game-modal">
+            <h1 style="font-family:'Orbitron'; color: var(--pink); font-size: 3.5rem; margin: 0;">SYNTHETOS</h1>
+            <p style="color: #666; letter-spacing: 5px; font-weight: 800; margin-bottom: 30px;">BIO-THREAT INFILTRATION DETECTED</p>
+            <div style="background: rgba(255,255,255,0.03); padding: 25px; border-radius: 8px; margin-bottom: 30px; font-size: 0.8rem; line-height: 1.6;">
+                WASD / ARROWS: Move Drone<br>
+                SPACE / TAP: Fire Weapon<br>
+                SHIFT / BUTTON: Tactical Dash
+            </div>
+            <button class="btn-update" style="width: 250px;" onclick="game.launch()">ENGAGE THREAT</button>
+            <button class="btn-update" style="width: 250px; margin-top: 15px; background: #222; color: #555;" onclick="game.exit()">ABORT MISSION</button>
+        </div>
+
+        <div id="menu-over" class="game-modal" style="display:none;">
+            <h1 id="over-title" style="font-family:'Orbitron'; font-size: 3rem;">MISSION END</h1>
+            <p id="over-msg" style="margin-bottom: 30px;"></p>
+            <button class="btn-update" style="width: 250px;" onclick="game.launch()">REDEPLOY</button>
+            <button class="btn-update" style="width: 250px; margin-top: 15px; background: #222; color: #555;" onclick="game.exit()">EXIT</button>
+        </div>
+    </div>
+
     <script>
-        // --- IOT ENGINE (CHAIN OF COMMAND) ---
+        // ==========================================
+        // 1. IOT CORE & COMMAND LOGIC
+        // ==========================================
         const iot = {
             socket: null,
-            manual: false,
-            relays: { exhaust:false, peltier:false, pump_w:false, pump_n:false },
-
+            isManual: false,
+            
             init() {
+                // Connect to your Render Proxy
                 this.socket = io("https://your-render-app.onrender.com");
+                
                 this.socket.on('connect', () => {
-                    document.getElementById('conn-lbl').innerText = "ONLINE";
-                    document.getElementById('conn-dot').classList.add('online');
+                    document.getElementById('conn-text').innerText = "UPLINK STABLE";
+                    document.getElementById('conn-dot').classList.add('active');
                 });
-                this.socket.on('data', d => {
-                    if(d.temp) document.getElementById('v-temp').innerText = d.temp.toFixed(1) + "°";
-                    if(d.hum) document.getElementById('v-hum').innerText = d.hum.toFixed(1) + "%";
-                    if(d.soil1) document.getElementById('v-soil').innerText = d.soil1 + "%";
-                    if(d.n) document.getElementById('v-npk').innerText = `${d.n} | ${d.p} | ${d.k}`;
+
+                this.socket.on('sensor_update', (data) => {
+                    // Match keys from sketch_dec26b.ino JSON
+                    if(data.temp) document.getElementById('v-temp').innerText = data.temp.toFixed(1);
+                    if(data.hum) document.getElementById('v-hum').innerText = data.hum.toFixed(1);
+                    if(data.soil1) document.getElementById('v-soil').innerText = data.soil1;
+                    if(data.n) document.getElementById('v-npk').innerText = `${data.n} | ${data.p} | ${data.k}`;
                 });
-                this.socket.on('frame', f => { document.getElementById('stream').src = "data:image/jpeg;base64," + f; });
+
+                this.socket.on('cam_frame', (frame) => {
+                    document.getElementById('cam-img').src = "data:image/jpeg;base64," + frame;
+                });
             },
 
-            toggleMode() {
-                this.manual = !this.manual;
-                const btn = document.getElementById('mode-sel');
-                btn.innerText = this.manual ? "MANUAL" : "AUTO";
-                btn.classList.toggle('manual', this.manual);
-                document.getElementById('man-grid').style.opacity = this.manual ? "1" : "0.3";
-                document.getElementById('man-grid').style.pointerEvents = this.manual ? "auto" : "none";
-                this.socket.emit('command', { mode: this.manual ? 'manual' : 'auto' });
+            switchMode() {
+                this.isManual = !this.isManual;
+                const btn = document.getElementById('mode-selector');
+                const panel = document.getElementById('manual-panel');
+                
+                btn.innerText = this.isManual ? "SYSTEM MODE: MANUAL" : "SYSTEM MODE: AUTO";
+                btn.classList.toggle('manual', this.isManual);
+                panel.style.opacity = this.isManual ? "1" : "0.3";
+                panel.style.pointerEvents = this.isManual ? "auto" : "none";
+
+                this.socket.emit('command', { mode: this.isManual ? 'manual' : 'auto' });
             },
 
-            relay(key) {
-                this.relays[key] = !this.relays[key];
-                const btn = document.getElementById('b-' + key);
-                btn.classList.toggle('on', this.relays[key]);
-                btn.innerText = this.relays[key] ? "ON" : "OFF";
-                this.socket.emit('command', { [key]: this.relays[key] });
+            toggleRelay(id) {
+                if(!this.isManual) return;
+                const btn = document.getElementById('ctrl-' + id);
+                const isActive = !btn.classList.contains('active');
+                
+                btn.classList.toggle('active', isActive);
+                btn.innerText = isActive ? "ON" : "OFF";
+                
+                // Matches Arduino: exhaust, peltier, pump_w, pump_n
+                this.socket.emit('command', { [id]: isActive });
             },
 
             saveConfig() {
-                let t = parseFloat(document.getElementById('t-temp').value);
-                let s = parseFloat(document.getElementById('t-soil').value);
-                let n = parseFloat(document.getElementById('t-npk').value);
+                let t = parseFloat(document.getElementById('set-temp').value);
+                let s = parseFloat(document.getElementById('set-soil').value);
+                let n = parseFloat(document.getElementById('set-npk').value);
 
-                // FAILSAFE: Human Error Compensation
-                let error = false;
-                if(t > 45) { t = 45; error = true; }
-                if(t < 5) { t = 5; error = true; }
-                if(s > 100) { s = 100; error = true; }
-
-                if(error) {
-                    ui.notify("FAILSAFE: ADJUSTED TO SAFE LIMITS");
-                    document.getElementById('t-temp').value = t;
-                    document.getElementById('t-soil').value = s;
-                }
+                // PRO-SHIELD: Biological Sanitization
+                let alerted = false;
+                if(t > 45) { t = 45; alerted = true; }
+                if(t < 5) { t = 5; alerted = true; }
+                if(s > 100) { s = 100; alerted = true; }
+                if(s < 0) { s = 0; alerted = true; }
+                
+                if(alerted) alert("PRO-SHIELD: Config adjusted to within biological safety limits.");
+                document.getElementById('set-temp').value = t;
+                document.getElementById('set-soil').value = s;
 
                 this.socket.emit('command', { targetTemp: t, targetSoil: s, targetNPK: n });
             }
         };
 
-        // --- UI UTILITIES ---
+        // ==========================================
+        // 2. UI UTILITIES
+        // ==========================================
         const ui = {
-            tab(id, el) {
+            changePage(id, el) {
                 document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                document.getElementById('p-' + id).classList.add('active');
+                document.getElementById('page-' + id).classList.add('active');
                 el.classList.add('active');
             },
-            help(page) {
-                const msgs = {
-                    home: "DASHBOARD: View real-time sensor telemetry and live video. Double-tap the video to expand.",
-                    manual: "OVERRIDE: Enable Manual Mode to directly control fans and pumps. Auto-logic is bypassed.",
-                    config: "TARGETS: Define ideal growth parameters. The Arduino maintains these values automatically."
+            showHelp(page) {
+                const tips = {
+                    home: "LIVE DASHBOARD: Real-time telemetry from Arduino sensors. Double-tap the camera for fullscreen surveillance.",
+                    manual: "MANUAL OVERRIDE: Suspends AUTO logic. Use to test hardware relays directly (Pins 22-25).",
+                    config: "BIO-TARGETS: Define ideal growth parameters. The AI will activate cooling/watering to maintain these values."
                 };
-                alert(msgs[page]);
+                alert(tips[page]);
             },
-            zoomCam() {
-                document.getElementById('cam-box').classList.toggle('expanded');
-            },
-            notify(txt) {
-                const el = document.getElementById('sys-msg');
-                el.innerText = txt;
-                el.style.transform = "translateX(0)";
-                setTimeout(() => { el.style.transform = "translateX(200%)"; }, 3000);
+            toggleZoom() {
+                document.getElementById('main-cam').classList.toggle('expanded');
             }
         };
 
-        // --- MINIGAME V5 (ANTI-DIZZY & FIXED PHYSICS) ---
+        // ==========================================
+        // 3. PRO GAME ENGINE v5.0
+        // ==========================================
         const game = {
-            active: false, paused: false,
             cvs: document.getElementById('canvas'),
             ctx: document.getElementById('canvas').getContext('2d'),
-            player: { x:0, y:0, hp:100, bullets:[] },
-            boss: { x:0, y:0, hp:1000, timer:0, attacks:[] },
-            keys: {},
+            active: false, paused: false,
+            width: 0, height: 0,
+            
+            player: { x:0, y:0, r:18, hp:100, speed:7, bullets:[], dashTime:0, dashCool:0, invul:false },
+            boss: { x:0, y:0, r:75, hp:1000, maxHp:1000, phase:0, timer:0, angle:0, projs:[] },
+            
+            keys: {}, joy: { active:false, dx:0, dy:0 },
 
-            open() {
-                document.getElementById('game-layer').style.display = 'block';
-                this.cvs.width = window.innerWidth;
-                this.cvs.height = window.innerHeight;
+            init() {
+                document.getElementById('game-view').style.display = 'block';
+                document.querySelector('.nav-dock').style.display = 'none';
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+            },
+
+            resize() {
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.cvs.width = this.width;
+                this.cvs.height = this.height;
+                if(this.width < 800) document.getElementById('m-ctrls').style.display = 'flex';
+            },
+
+            launch() {
+                document.querySelectorAll('.game-modal').forEach(m => m.style.display = 'none');
+                document.getElementById('hud').style.display = 'block';
+                
+                this.player.x = this.width / 2;
+                this.player.y = this.height - 120;
+                this.player.hp = 100;
+                this.player.bullets = [];
+                
+                this.boss.x = this.width / 2;
+                this.boss.y = 180;
+                this.boss.hp = 1000;
+                this.boss.projs = [];
+                this.boss.timer = 0;
+
                 this.active = true;
+                this.paused = false;
                 this.loop();
             },
 
-            start() {
-                document.getElementById('game-menu').style.display = 'none';
-                document.getElementById('boss-intro').style.display = 'flex';
-                setTimeout(() => { document.getElementById('boss-intro').style.display = 'none'; }, 2500);
-                
-                this.player = { x: this.cvs.width/2, y: this.cvs.height-100, hp:100, bullets:[] };
-                this.boss = { x: this.cvs.width/2, y: 150, hp:1000, timer:0, attacks:[] };
-                this.paused = false;
-            },
+            togglePause() { this.paused = !this.paused; if(!this.paused) this.loop(); },
+            exit() { this.active = false; document.getElementById('game-view').style.display = 'none'; document.querySelector('.nav-dock').style.display = 'flex'; },
 
-            pause() {
-                this.paused = !this.paused;
-                ui.notify(this.paused ? "SIMULATION PAUSED" : "SIMULATION RESUMED");
-            },
-
-            exit() {
-                this.active = false;
-                document.getElementById('game-layer').style.display = 'none';
-            },
-
-            drawGrid() {
-                // Static Reference Grid for Motion Sickness Prevention
-                this.ctx.strokeStyle = "rgba(0, 243, 255, 0.05)";
-                this.ctx.lineWidth = 1;
-                for(let i=0; i<this.cvs.width; i+=60) {
-                    this.ctx.beginPath(); this.ctx.moveTo(i,0); this.ctx.lineTo(i,this.cvs.height); this.ctx.stroke();
-                }
-                for(let i=0; i<this.cvs.height; i+=60) {
-                    this.ctx.beginPath(); this.ctx.moveTo(0,i); this.ctx.lineTo(this.cvs.width,i); this.ctx.stroke();
-                }
-            },
-
+            // --- ENGINE LOOP ---
             loop() {
-                if(!this.active) return;
-                if(!this.paused) {
-                    this.update();
-                    this.draw();
-                }
+                if(!this.active || this.paused) return;
+                const ctx = this.ctx;
+
+                // 1. CLEAR FRAME & DRAW ANTI-DIZZY GRID
+                ctx.fillStyle = "#020205";
+                ctx.fillRect(0,0,this.width, this.height);
+                
+                ctx.strokeStyle = "rgba(0, 243, 255, 0.05)";
+                ctx.lineWidth = 1;
+                const step = 60;
+                for(let x=0; x<this.width; x+=step) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,this.height); ctx.stroke(); }
+                for(let y=0; y<this.height; y+=step) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(this.width,y); ctx.stroke(); }
+
+                this.updatePlayer();
+                this.updateBoss();
+                this.updateProjectiles();
+
                 requestAnimationFrame(() => this.loop());
             },
 
-            update() {
-                // Diagonal Speed Normalization & Edge Clamping
-                let vx = 0, vy = 0;
-                if(this.keys['w']) vy = -1;
-                if(this.keys['s']) vy = 1;
-                if(this.keys['a']) vx = -1;
-                if(this.keys['d']) vx = 1;
+            updatePlayer() {
+                const p = this.player;
+                let mx = 0, my = 0;
 
-                const speed = 7;
-                const mag = Math.hypot(vx, vy);
-                if(mag > 0) {
-                    this.player.x += (vx/mag) * speed;
-                    this.player.y += (vy/mag) * speed;
+                if(this.keys['w'] || this.keys['ArrowUp']) my = -1;
+                if(this.keys['s'] || this.keys['ArrowDown']) my = 1;
+                if(this.keys['a'] || this.keys['ArrowLeft']) mx = -1;
+                if(this.keys['d'] || this.keys['ArrowRight']) mx = 1;
+                if(this.joy.active) { mx = this.joy.dx; my = this.joy.dy; }
+
+                // Normalization
+                const mag = Math.hypot(mx, my);
+                if(mag > 0) { mx /= mag; my /= mag; }
+
+                // Dash
+                if(p.dashCool > 0) p.dashCool--;
+                if(this.keys['Shift'] && p.dashCool <= 0) { p.dashTime = 12; p.dashCool = 60; p.invul = true; }
+
+                let curSpeed = p.dashTime > 0 ? p.speed * 3 : p.speed;
+                if(p.dashTime > 0) p.dashTime--; else p.invul = false;
+
+                p.x += mx * curSpeed;
+                p.y += my * curSpeed;
+
+                // Clamp
+                p.x = Math.max(p.r, Math.min(this.width - p.r, p.x));
+                p.y = Math.max(p.r, Math.min(this.height - p.r, p.y));
+
+                // Weapon
+                if(this.keys[' '] && p.bullets.length < 10) {
+                    p.bullets.push({x: p.x, y: p.y - 20, vy: -15});
+                    this.keys[' '] = false;
                 }
 
-                // Hard Clamp (Prevents Sticking)
-                this.player.x = Math.max(30, Math.min(this.cvs.width-30, this.player.x));
-                this.player.y = Math.max(30, Math.min(this.cvs.height-30, this.player.y));
-
-                // Boss AI
-                this.boss.timer++;
-                if(this.boss.timer % 20 === 0) {
-                    this.boss.attacks.push({ 
-                        x:this.boss.x, y:this.boss.y, 
-                        vx:Math.cos(this.boss.timer*0.1)*5, 
-                        vy:5, type:'spike' 
-                    });
-                }
-
-                this.boss.attacks.forEach((a, i) => {
-                    a.x += a.vx; a.y += a.vy;
-                    if(Math.hypot(a.x - this.player.x, a.y - this.player.y) < 30) {
-                        this.player.hp -= 4;
-                        this.boss.attacks.splice(i, 1);
-                    }
-                    if(a.y > this.cvs.height) this.boss.attacks.splice(i, 1);
-                });
-
-                document.getElementById('hp-p').style.width = this.player.hp + "%";
-                document.getElementById('hp-b').style.width = (this.boss.hp/10) + "%";
+                // DRAW DRONE
+                this.ctx.save();
+                this.ctx.translate(p.x, p.y);
+                this.ctx.strokeStyle = p.invul ? "#fff" : var(--cyan);
+                this.ctx.lineWidth = 3;
+                this.ctx.strokeRect(-15, -15, 30, 30);
+                this.ctx.beginPath(); this.ctx.arc(0, 0, 8, 0, Math.PI*2); this.ctx.fill();
+                this.ctx.restore();
             },
 
-            draw() {
-                const ctx = this.ctx;
-                ctx.fillStyle = "#020205";
-                ctx.fillRect(0,0,this.cvs.width, this.cvs.height);
-                this.drawGrid();
+            updateBoss() {
+                const b = this.boss;
+                b.timer++;
+                
+                // Switch 7 Phases
+                if(b.timer % 180 === 0) b.phase = Math.floor(Math.random() * 7);
 
-                // Player Model (Geometric Drone)
-                ctx.strokeStyle = var(--cyan);
-                ctx.lineWidth = 2;
-                ctx.strokeRect(this.player.x-20, this.player.y-10, 40, 20);
-                ctx.beginPath(); ctx.arc(this.player.x, this.player.y, 10, 0, Math.PI*2); ctx.stroke();
+                if(b.timer % 10 === 0) {
+                    switch(b.phase) {
+                        case 0: // Spore Spiral
+                            b.angle += 0.5;
+                            b.projs.push({x:b.x, y:b.y, vx:Math.cos(b.angle)*6, vy:Math.sin(b.angle)*6, r:6, c:var(--pink)});
+                            break;
+                        case 1: // Bio-Laser
+                            if(b.timer % 50 === 0) b.projs.push({x:this.player.x, y:0, vx:0, vy:18, r:12, c:var(--yellow), laser:true});
+                            break;
+                        case 2: // Vine Dash (Boss moves)
+                            b.x += (this.player.x - b.x) * 0.04;
+                            break;
+                        case 3: // Root Trap
+                            if(b.timer % 40 === 0) b.projs.push({x:Math.random()*this.width, y:this.height, vx:0, vy:-10, r:6, c:var(--green)});
+                            break;
+                        case 4: // Nutrient Drain (Homing)
+                            if(b.timer % 80 === 0) b.projs.push({x:b.x, y:b.y, vx:0, vy:0, r:8, c:var(--cyan), home:true});
+                            break;
+                        case 5: // Pollen Cloud
+                            b.projs.push({x:b.x, y:b.y, vx:(Math.random()-0.5)*12, vy:Math.random()*12, r:4, c:"#fff"});
+                            break;
+                        case 6: // Growth Surge
+                            for(let i=0; i<8; i++) b.projs.push({x:b.x, y:b.y, vx:Math.cos(i)*4, vy:Math.sin(i)*4, r:15, c:var(--pink)});
+                            break;
+                    }
+                }
 
-                // Boss Model (Synthetos Core)
-                ctx.fillStyle = var(--pink);
-                ctx.beginPath();
-                const sz = 50 + Math.sin(this.boss.timer*0.1)*10;
-                ctx.arc(this.boss.x, this.boss.y, sz, 0, Math.PI*2);
-                ctx.fill();
+                // DRAW BOSS
+                this.ctx.save();
+                this.ctx.translate(b.x, b.y);
+                const s = 1 + Math.sin(b.timer*0.05)*0.1;
+                this.ctx.scale(s, s);
+                this.ctx.fillStyle = var(--pink);
+                this.ctx.beginPath(); this.ctx.arc(0, 0, b.r, 0, Math.PI*2); this.ctx.fill();
+                this.ctx.strokeStyle = "#fff"; this.ctx.lineWidth = 4; this.ctx.stroke();
+                this.ctx.restore();
+            },
 
-                // Complex Attacks (Shards)
-                ctx.fillStyle = var(--yellow);
-                this.boss.attacks.forEach(a => {
-                    ctx.beginPath();
-                    ctx.moveTo(a.x, a.y-15);
-                    ctx.lineTo(a.x-5, a.y);
-                    ctx.lineTo(a.x, a.y+15);
-                    ctx.lineTo(a.x+5, a.y);
-                    ctx.fill();
+            updateProjectiles() {
+                // Player Projectiles
+                this.player.bullets.forEach((bull, i) => {
+                    bull.y += bull.vy;
+                    this.ctx.fillStyle = var(--yellow);
+                    this.ctx.fillRect(bull.x-2, bull.y, 4, 15);
+                    if(Math.hypot(bull.x - this.boss.x, bull.y - this.boss.y) < this.boss.r) {
+                        this.boss.hp -= 10;
+                        this.player.bullets.splice(i, 1);
+                    }
+                    if(bull.y < 0) this.player.bullets.splice(i, 1);
                 });
+
+                // Boss Projectiles
+                this.boss.projs.forEach((p, i) => {
+                    if(p.home) {
+                        const ang = Math.atan2(this.player.y - p.y, this.player.x - p.x);
+                        p.vx = Math.cos(ang) * 4.5; p.vy = Math.sin(ang) * 4.5;
+                    }
+                    p.x += p.vx; p.y += p.vy;
+                    this.ctx.fillStyle = p.c;
+                    if(p.laser) this.ctx.fillRect(p.x-6, p.y, 12, 80);
+                    else { this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); this.ctx.fill(); }
+
+                    if(!this.player.invul && Math.hypot(p.x - this.player.x, p.y - this.player.y) < p.r + 15) {
+                        this.player.hp -= 5;
+                        this.boss.projs.splice(i, 1);
+                    }
+                    if(p.y > this.height || p.y < -100) this.boss.projs.splice(i, 1);
+                });
+
+                document.getElementById('hp-player').style.width = this.player.hp + "%";
+                document.getElementById('hp-boss').style.width = (this.boss.hp / 10) + "%";
+
+                if(this.player.hp <= 0) this.end("MISSION FAILED", "Drone Scrapped");
+                if(this.boss.hp <= 0) this.end("THREAT PURGED", "Sector 7 Secured");
+            },
+
+            end(title, msg) {
+                this.active = false;
+                document.getElementById('menu-over').style.display = 'flex';
+                document.getElementById('over-title').innerText = title;
+                document.getElementById('over-msg').innerText = msg;
             }
         };
 
+        // EVENT LISTENERS
         window.addEventListener('keydown', e => game.keys[e.key] = true);
         window.addEventListener('keyup', e => game.keys[e.key] = false);
+
+        const jBase = document.getElementById('j-base');
+        const jStick = document.getElementById('j-stick');
+        jBase.addEventListener('touchstart', e => { game.joy.active = true; });
+        jBase.addEventListener('touchmove', e => {
+            e.preventDefault();
+            const t = e.touches[0];
+            const r = jBase.getBoundingClientRect();
+            const cx = r.left + r.width/2;
+            const cy = r.top + r.height/2;
+            let dx = t.clientX - cx;
+            let dy = t.clientY - cy;
+            const d = Math.min(50, Math.hypot(dx, dy));
+            const a = Math.atan2(dy, dx);
+            game.joy.dx = Math.cos(a) * (d/50);
+            game.joy.dy = Math.sin(a) * (d/50);
+            jStick.style.transform = `translate(-50%, -50%) translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px)`;
+        });
+        jBase.addEventListener('touchend', () => { game.joy.active = false; jStick.style.transform = `translate(-50%, -50%)`; });
+        document.getElementById('b-fire').addEventListener('touchstart', e => { e.preventDefault(); game.keys[' '] = true; });
+        document.getElementById('b-dash').addEventListener('touchstart', e => { e.preventDefault(); game.keys['Shift'] = true; });
 
         iot.init();
     </script>
