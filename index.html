@@ -2,1036 +2,818 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BIODOME OS v5.0 | FULL EXPANDED PRODUCTION BUILD</title>
-    
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Fira+Code:wght@300;500&display=swap" rel="stylesheet">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biodome Controller v5.0</title>
     <style>
-        /* --- SYSTEM DESIGN SYSTEM (V5-CORE) --- */
         :root {
-            --cyan: #00f3ff;
-            --pink: #ff0055;
-            --green: #39ff14;
-            --yellow: #ffd700;
-            --white: #ffffff;
-            --dark-bg: #010103;
-            --panel-bg: rgba(10, 10, 18, 0.98);
-            --border-glow: 0 0 15px rgba(0, 243, 255, 0.2);
-            --header-h: 75px;
-            --dock-h: 100px;
-        }
-
-        /* --- GLOBAL RESET & SCROLLING --- */
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            outline: none;
-            user-select: none;
+            --primary-color: #2e7d32;
+            --accent-color: #66bb6a;
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --danger: #d32f2f;
         }
 
         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
             padding: 0;
-            background: var(--dark-bg);
-            color: var(--white);
-            font-family: 'Rajdhani', sans-serif;
-            height: 100vh;
-            overflow: hidden;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
+            min-height: 100vh;
         }
 
-        /* --- V5 HEADER COMPONENT --- */
-        .system-header {
-            height: var(--header-h);
-            background: #000000;
-            border-bottom: 2px solid #111;
+        /* --- Navigation --- */
+        nav {
+            background-color: #000;
+            padding: 1rem;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 30px;
-            z-index: 2000;
-            box-shadow: 0 5px 30px rgba(0,0,0,0.5);
+            justify-content: space-around;
+            border-bottom: 2px solid var(--primary-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
-        .logo-block {
-            display: flex;
-            flex-direction: column;
+        nav button {
+            background: none;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-weight: bold;
         }
 
-        .logo-text {
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: 1.3rem;
-            letter-spacing: 4px;
-            color: var(--cyan);
-            text-shadow: var(--border-glow);
+        nav button.active, nav button:hover {
+            background-color: var(--primary-color);
+            color: white;
         }
 
-        .sub-text {
-            font-size: 0.6rem;
-            letter-spacing: 2px;
-            color: #444;
-            font-weight: 700;
-            margin-top: 2px;
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(255,255,255,0.03);
-            padding: 10px 18px;
-            border-radius: 50px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--pink);
-            transition: 0.4s;
-        }
-
-        .status-dot.active {
-            background: var(--green);
-            box-shadow: 0 0 12px var(--green);
-        }
-
-        .status-msg {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: #666;
-            text-transform: uppercase;
-        }
-
-        /* --- VIEWPORT ENGINE --- */
-        #main-viewport {
+        /* --- Sections --- */
+        main {
             flex: 1;
-            overflow-y: auto;
-            position: relative;
-            padding-bottom: var(--dock-h);
-            scrollbar-width: none;
-        }
-
-        #main-viewport::-webkit-scrollbar { display: none; }
-
-        .app-page {
-            display: none;
-            padding: 30px;
+            padding: 1rem;
             max-width: 1200px;
             margin: 0 auto;
-            animation: fadeIn 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            width: 100%;
+            box-sizing: border-box;
         }
 
-        .app-page.visible { display: block; }
+        section {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        section.active {
+            display: block;
+        }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- UI COMPONENTS (CARDS) --- */
-        .system-card {
-            background: var(--panel-bg);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
+        /* --- Cards & Help --- */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             position: relative;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.8);
         }
 
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            border-bottom: 1px solid #1a1a1a;
-            padding-bottom: 15px;
-        }
-
-        .card-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.85rem;
-            letter-spacing: 2px;
-            color: #777;
-            text-transform: uppercase;
-        }
-
-        /* --- CAMERA MODULE (PRO-INTEGRITY) --- */
-        .video-container {
-            width: 100%;
-            height: 380px;
-            background: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-            border: 1px solid #151515;
+        .help-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--accent-color);
+            color: #000;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-weight: bold;
             cursor: pointer;
-            transition: 0.5s transform;
+            z-index: 10;
         }
 
-        .video-container.fullscreen {
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .help-content {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 10px;
+            max-width: 80%;
+            border: 1px solid var(--accent-color);
+        }
+
+        /* --- Dashboard --- */
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .sensor-box {
+            background: #2a2a2a;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .sensor-value {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        /* --- Thresholds --- */
+        .threshold-group {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .threshold-group label {
+            margin-bottom: 0.5rem;
+            color: #aaa;
+        }
+
+        .threshold-group input {
+            background: #333;
+            border: 1px solid #555;
+            color: white;
+            padding: 0.8rem;
+            border-radius: 5px;
+        }
+
+        .save-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 1rem;
+            width: 100%;
+            font-size: 1.1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+
+        /* --- Camera --- */
+        .camera-container {
+            position: relative;
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            text-align: center;
+        }
+
+        /* CORRECTED: Camera feed inverted as requested */
+        #camera-feed {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            transform: rotate(180deg); /* Physical camera is upside down */
+            transition: all 0.5s ease;
+            cursor: zoom-in;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Fullscreen Video Mode */
+        #camera-feed.enlarged {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
+            max-width: none;
             z-index: 5000;
-            border-radius: 0;
+            object-fit: contain;
+            background: #000;
+            cursor: zoom-out;
+            transform: rotate(180deg); /* Maintain rotation */
         }
 
-        .feed-img {
+        /* --- Minigame --- */
+        #game-container {
+            position: relative;
             width: 100%;
-            height: 100%;
-            object-fit: cover;
-            /* V5 180 DEGREE CORRECTION */
-            transform: rotate(180deg); 
-            transition: 0.3s;
+            height: 400px;
+            background: #111;
+            border: 2px solid var(--accent-color);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        .overlay-data {
+        canvas {
+            background: #000;
+            /* Reduced dizziness: static dark background instead of scrolling starfield if preferred */
+        }
+
+        .game-overlay {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 15px;
-            border-radius: 4px;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.6rem;
-            color: var(--cyan);
-            border-left: 4px solid var(--cyan);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
             pointer-events: none;
         }
 
-        /* --- TELEMETRY GRID --- */
-        .telemetry-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 25px;
-        }
-
-        .stat-box {
-            background: rgba(255,255,255,0.02);
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.03);
-            transition: 0.3s;
-        }
-
-        .stat-box:hover {
-            background: rgba(255,255,255,0.04);
-            border-color: rgba(255,255,255,0.1);
-        }
-
-        .stat-value {
-            display: block;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.8rem;
-            font-weight: 700;
-            color: #fff;
-            margin-bottom: 10px;
-            text-shadow: 0 0 15px rgba(255,255,255,0.15);
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            font-weight: 800;
-            color: var(--cyan);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        /* --- MANUAL CONTROL INTERFACE (RELAY SYNC) --- */
-        .control-row {
+        .game-ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            background: rgba(255,255,255,0.02);
-            padding: 22px 30px;
-            border-radius: 12px;
-            margin-bottom: 18px;
-            border: 1px solid transparent;
-            transition: 0.3s;
-        }
-
-        .control-row:hover {
-            background: rgba(255,255,255,0.04);
-            border-color: rgba(0, 243, 255, 0.2);
-        }
-
-        .pin-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .pin-name {
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: #eee;
-        }
-
-        .pin-number {
-            font-family: 'Fira Code', monospace;
-            font-size: 0.65rem;
-            color: #444;
-            margin-top: 4px;
-        }
-
-        .btn-toggle {
-            width: 100px;
-            padding: 15px 0;
-            background: #111;
-            border: 1px solid #333;
-            color: #555;
-            border-radius: 8px;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .btn-toggle.active {
-            background: var(--cyan);
-            color: #000;
-            border-color: var(--cyan);
-            box-shadow: var(--border-glow);
-        }
-
-        .system-mode-selector {
-            width: 100%;
-            padding: 25px;
-            margin-bottom: 35px;
-            background: transparent;
-            border: 2px solid var(--pink);
-            color: var(--pink);
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: 1.1rem;
-            letter-spacing: 3px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: 0.4s;
-        }
-
-        .system-mode-selector.manual {
-            background: var(--pink);
-            color: #fff;
-            box-shadow: 0 0 30px rgba(255, 0, 85, 0.4);
-        }
-
-        /* --- CONFIGURATION PANEL --- */
-        .input-group {
-            margin-bottom: 30px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 800;
-            color: #555;
-            margin-bottom: 12px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .input-group input {
-            width: 100%;
-            background: #000;
-            border: 1px solid #222;
-            padding: 22px;
-            border-radius: 10px;
-            color: #fff;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
-            transition: 0.3s;
-        }
-
-        .input-group input:focus {
-            border-color: var(--cyan);
-            box-shadow: var(--border-glow);
-        }
-
-        .save-button {
-            width: 100%;
-            padding: 25px;
-            background: var(--green);
-            color: #000;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: 1rem;
-            letter-spacing: 2px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            box-shadow: 0 10px 30px rgba(57, 255, 20, 0.2);
-        }
-
-        /* --- DOCK NAVIGATION --- */
-        .system-dock {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: var(--dock-h);
-            background: #050508;
-            border-top: 1px solid #151515;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 0 10px;
-            z-index: 2000;
-        }
-
-        .dock-item {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.3s;
-            color: #333;
-        }
-
-        .dock-item.active {
-            color: var(--cyan);
-        }
-
-        .dock-icon {
-            font-size: 1.8rem;
-            margin-bottom: 8px;
-        }
-
-        .dock-label {
-            font-size: 0.65rem;
-            font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        /* --- SYNTHETOS GAME ENGINE LAYER --- */
-        #threat-engagement-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 6000;
-            display: none;
-        }
-
-        #game-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        .hud-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
             pointer-events: none;
-            padding: 50px;
         }
-
-        .hp-bar-container {
-            width: 320px;
-            height: 16px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid #333;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hp-fill {
-            height: 100%;
-            width: 100%;
-            transition: width 0.2s;
-        }
-
-        .pause-control {
-            position: absolute;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 65px;
-            height: 65px;
-            border-radius: 50%;
-            border: 2px solid var(--cyan);
-            color: var(--cyan);
-            background: rgba(0,0,0,0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.4rem;
+        
+        .game-btn {
             pointer-events: auto;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid white;
+            color: white;
+            padding: 5px 10px;
             cursor: pointer;
-            backdrop-filter: blur(8px);
-        }
-
-        /* --- MODAL ENGINE --- */
-        .system-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.98);
-            z-index: 7000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 40px;
-        }
-
-        .modal-headline {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 5rem;
-            margin: 0;
-            color: var(--pink);
-            letter-spacing: -2px;
-        }
-
-        .modal-subline {
             font-size: 0.8rem;
-            letter-spacing: 12px;
-            color: #444;
-            margin-bottom: 50px;
-            text-transform: uppercase;
-            font-weight: 900;
         }
 
-        .modal-action-btn {
-            width: 320px;
-            padding: 25px;
-            margin-bottom: 20px;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: 1rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+        /* --- Status Bar --- */
+        #status-bar {
+            background: #333;
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #888;
         }
+        
+        .error-msg { color: var(--danger); }
+        .success-msg { color: var(--accent-color); }
+
     </style>
 </head>
 <body>
 
-    <header class="system-header">
-        <div class="logo-block">
-            <span class="logo-text">BIODOME OS</span>
-            <span class="sub-text">VERSION 5.0 // MASTER-CORE INTEGRITY</span>
-        </div>
-        <div class="connection-status">
-            <div id="uplink-dot" class="status-dot"></div>
-            <span id="uplink-label" class="status-msg">SERIAL LINK DOWN</span>
-        </div>
-    </header>
+    <nav>
+        <button onclick="showSection('dashboard')" class="active">Dashboard</button>
+        <button onclick="showSection('thresholds')">Thresholds</button>
+        <button onclick="showSection('camera')">Camera</button>
+        <button onclick="showSection('minigame')">Minigame</button>
+    </nav>
 
-    <main id="main-viewport">
-        
-        <section id="page-dash" class="app-page visible">
-            <div class="system-card">
-                <div class="card-header">
-                    <span class="card-title">Surveillance Module // CAM_01</span>
-                    <span style="font-size:0.6rem; color:#333;">ENCRYPTED AES-256</span>
-                </div>
-                <div class="video-container" id="camera-viewport" onclick="actions.toggleFS()">
-                    <img id="mjpeg-stream" class="feed-img" src="" alt="AWAITING VIDEO HANDSHAKE...">
-                    <div class="overlay-data">
-                        LIVE_FEED // ROTATION_OFFSET: 180°<br>
-                        FRAME_SYNC: STABLE<br>
-                        ACTIVE_CORE: ARDUINO_MEGA_2560
+    <main>
+        <section id="dashboard" class="active">
+            <div class="card">
+                <div class="help-icon" onclick="openHelp('dash')">?</div>
+                <h2>Live Status</h2>
+                <div class="sensor-grid">
+                    <div class="sensor-box">
+                        <div>Temperature</div>
+                        <div class="sensor-value"><span id="val-temp">--</span>°C</div>
                     </div>
-                </div>
-            </div>
-
-            <div class="telemetry-grid">
-                <div class="stat-box">
-                    <span class="stat-value" id="val-temp">--.-°</span>
-                    <span class="stat-label">Air Temp</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-value" id="val-hum">--%</span>
-                    <span class="stat-label">Humidity</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-value" id="val-soil1">--%</span>
-                    <span class="stat-label">Soil S1</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-value" id="val-soil2">--%</span>
-                    <span class="stat-label">Soil S2</span>
-                </div>
-                <div class="stat-box" style="grid-column: span 2;">
-                    <div id="val-npk" style="font-family:'Orbitron'; font-size: 2.5rem; color:#fff; font-weight:900; margin-bottom:10px;">-- | -- | --</div>
-                    <span class="stat-label">NPK Analysis (N-P-K)</span>
-                </div>
-            </div>
-        </section>
-
-        <section id="page-manual" class="app-page">
-            <div class="system-card">
-                <div class="card-header">
-                    <span class="card-title">Relay Matrix Control</span>
-                    <span style="font-size:0.6rem; color:var(--pink);">WARNING: BIOS SUSPENDED IN MANUAL</span>
-                </div>
-
-                <button id="mode-toggle" class="system-mode-selector" onclick="iot.toggleMode()">
-                    SYSTEM STATUS: AUTOMATED
-                </button>
-
-                <div id="manual-controls" style="opacity: 0.2; pointer-events: none; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);">
-                    <div class="control-row">
-                        <div class="pin-info">
-                            <span class="pin-name">Exhaust Fan System</span>
-                            <span class="pin-number">HARDWARE PIN 22</span>
-                        </div>
-                        <button class="btn-toggle" id="btn-exhaust" onclick="iot.setRelay('exhaust')">OFF</button>
+                    <div class="sensor-box">
+                        <div>Humidity</div>
+                        <div class="sensor-value"><span id="val-hum">--</span>%</div>
                     </div>
-                    <div class="control-row">
-                        <div class="pin-info">
-                            <span class="pin-name">Peltier Thermo-Core</span>
-                            <span class="pin-number">HARDWARE PIN 23</span>
-                        </div>
-                        <button class="btn-toggle" id="btn-peltier" onclick="iot.setRelay('peltier')">OFF</button>
+                    <div class="sensor-box">
+                        <div>Soil Moisture</div>
+                        <div class="sensor-value"><span id="val-soil">--</span>%</div>
                     </div>
-                    <div class="control-row">
-                        <div class="pin-info">
-                            <span class="pin-name">Main Irrigation Pump</span>
-                            <span class="pin-number">HARDWARE PIN 24</span>
-                        </div>
-                        <button class="btn-toggle" id="btn-pump_w" onclick="iot.setRelay('pump_w')">OFF</button>
+                    <div class="sensor-box">
+                        <div>Nitrogen (N)</div>
+                        <div class="sensor-value"><span id="val-n">--</span> mg/kg</div>
                     </div>
-                    <div class="control-row">
-                        <div class="pin-info">
-                            <span class="pin-name">Nutrient Distribution</span>
-                            <span class="pin-number">HARDWARE PIN 25</span>
-                        </div>
-                        <button class="btn-toggle" id="btn-pump_n" onclick="iot.setRelay('pump_n')">OFF</button>
+                    <div class="sensor-box">
+                        <div>Phosphorus (P)</div>
+                        <div class="sensor-value"><span id="val-p">--</span> mg/kg</div>
+                    </div>
+                    <div class="sensor-box">
+                        <div>Potassium (K)</div>
+                        <div class="sensor-value"><span id="val-k">--</span> mg/kg</div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section id="page-config" class="app-page">
-            <div class="system-card">
-                <div class="card-header">
-                    <span class="card-title">Logic Thresholds</span>
+        <section id="thresholds">
+            <div class="card">
+                <div class="help-icon" onclick="openHelp('thresh')">?</div>
+                <h2>System Automation</h2>
+                <p style="color:#888; font-size: 0.9rem;">Set triggers for automated care. (PINs hidden for security)</p>
+                
+                <div class="threshold-group">
+                    <label>Min Temperature (°C)</label>
+                    <input type="number" id="in-temp" placeholder="24">
+                </div>
+                <div class="threshold-group">
+                    <label>Min Humidity (%)</label>
+                    <input type="number" id="in-hum" placeholder="60">
+                </div>
+                <div class="threshold-group">
+                    <label>Min Soil Moisture (%)</label>
+                    <input type="number" id="in-soil" placeholder="40">
+                </div>
+                
+                <div class="threshold-group">
+                    <label>Min Nitrogen (N)</label>
+                    <input type="number" id="in-n" placeholder="100">
+                </div>
+                <div class="threshold-group">
+                    <label>Min Phosphorus (P)</label>
+                    <input type="number" id="in-p" placeholder="50">
+                </div>
+                <div class="threshold-group">
+                    <label>Min Potassium (K)</label>
+                    <input type="number" id="in-k" placeholder="100">
                 </div>
 
-                <div class="input-group">
-                    <label>Optimum Temperature (°C)</label>
-                    <input type="number" id="target-temp" value="25.0" step="0.1">
-                </div>
+                <button class="save-btn" onclick="saveSettings()">Update System</button>
+            </div>
+        </section>
 
-                <div class="input-group">
-                    <label>Critical Soil Moisture (%)</label>
-                    <input type="number" id="target-moisture" value="45">
+        <section id="camera">
+            <div class="card">
+                <div class="help-icon" onclick="openHelp('cam')">?</div>
+                <h2>Live Feed</h2>
+                <div class="camera-container">
+                    <img id="camera-feed" src="https://via.placeholder.com/640x480?text=Connecting+Camera..." alt="Camera Feed">
                 </div>
+                <p style="text-align:center; font-size:0.8rem; margin-top:10px;">Double-tap video to enlarge.</p>
+            </div>
+        </section>
 
-                <div class="input-group">
-                    <label>NPK Cycle Interval (Hrs)</label>
-                    <input type="number" id="target-npk" value="24">
+        <section id="minigame">
+            <div class="card" style="padding: 0; border:none; background:transparent;">
+                <div id="game-container">
+                    <canvas id="gameCanvas" width="600" height="400"></canvas>
+                    
+                    <div class="game-ui">
+                        <span id="score-display">Score: 0</span>
+                        <button class="game-btn" onclick="togglePause()">Pause</button>
+                    </div>
+
+                    <div id="game-overlay" class="game-overlay">
+                        <h2 id="overlay-title">BIODOME DEFENDER</h2>
+                        <p id="overlay-sub">Press Space or Tap to Start</p>
+                    </div>
                 </div>
-
-                <button class="save-button" onclick="iot.pushConfig()">PUSH CONFIG TO ARDUINO CORE</button>
-                <p style="font-size:0.6rem; color:#444; margin-top:20px; text-transform:uppercase; letter-spacing:1px; line-height:1.5;">
-                    Values are validated against biological safety limits before transmission.
-                </p>
+                <p style="text-align:center; color:#666; font-size:0.8rem; margin-top: 5px;">Arrows/WASD to move. Space to shoot.</p>
             </div>
         </section>
     </main>
 
-    <nav class="system-dock">
-        <div class="dock-item active" onclick="actions.nav('dash', this)">
-            <span class="dock-icon">🏠</span>
-            <span class="dock-label">Home</span>
-        </div>
-        <div class="dock-item" onclick="actions.nav('manual', this)">
-            <span class="dock-icon">🎛️</span>
-            <span class="dock-label">Manual</span>
-        </div>
-        <div class="dock-item" onclick="actions.nav('config', this)">
-            <span class="dock-icon">⚙️</span>
-            <span class="dock-label">Config</span>
-        </div>
-        <div class="dock-item" onclick="game.init()" style="color:var(--pink);">
-            <span class="dock-icon">👾</span>
-            <span class="dock-label">Defense</span>
-        </div>
-    </nav>
+    <div id="status-bar">System Status: Initializing...</div>
 
-    <div id="threat-engagement-layer">
-        <canvas id="game-canvas"></canvas>
-        
-        <div class="hud-container">
-            <div class="pause-control" id="pause-btn" onclick="game.togglePause()">II</div>
-            
-            <div style="position:absolute; bottom:50px; left:50px;">
-                <div style="font-family:'Orbitron'; font-size:0.8rem; color:var(--cyan); margin-bottom:10px; font-weight:900;">UNIT INTEGRITY</div>
-                <div class="hp-bar-container">
-                    <div id="hp-player" class="hp-fill" style="background:var(--cyan); box-shadow: 0 0 15px var(--cyan);"></div>
-                </div>
-            </div>
-
-            <div style="position:absolute; bottom:50px; right:50px; text-align:right;">
-                <div style="font-family:'Orbitron'; font-size:0.8rem; color:var(--pink); margin-bottom:10px; font-weight:900;">SYNTHETOS CORE</div>
-                <div class="hp-bar-container">
-                    <div id="hp-boss" class="hp-fill" style="background:var(--pink); box-shadow: 0 0 15px var(--pink);"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="modal-start" class="system-modal">
-            <h1 class="modal-headline">SYNTHETOS</h1>
-            <div class="modal-subline">BIOS-THREAT DETECTED</div>
-            <div style="color:#666; font-size:0.75rem; margin-bottom:40px; line-height:2; font-family:'Fira Code';">
-                WASD / ARROWS : NAVIGATE UNIT<br>
-                SPACE : DISCHARGE PULSE CANNON<br>
-                SHIFT : TACTICAL DASH (0.5s INVULNERABILITY)
-            </div>
-            <button class="modal-action-btn" style="background:var(--cyan); color:#000;" onclick="game.start()">Engage Threat</button>
-            <button class="modal-action-btn" style="background:#111; color:#444;" onclick="game.close()">Abort Mission</button>
-        </div>
-
-        <div id="modal-end" class="system-modal" style="display:none;">
-            <h1 id="end-title" class="modal-headline" style="font-size:4rem;">MISSION END</h1>
-            <div id="end-msg" class="modal-subline" style="margin-bottom:40px;">UNIT TERMINATED</div>
-            <button class="modal-action-btn" style="background:var(--cyan); color:#000;" onclick="game.start()">Redeploy</button>
-            <button class="modal-action-btn" style="background:#111; color:#444;" onclick="game.close()">Return to BioDome OS</button>
+    <div id="help-modal" class="help-modal" onclick="closeHelp()">
+        <div class="help-content" onclick="event.stopPropagation()">
+            <h3 id="help-title">Info</h3>
+            <p id="help-text">...</p>
+            <button class="game-btn" style="background:var(--primary-color); width:100%; margin-top:1rem;" onclick="closeHelp()">Close</button>
         </div>
     </div>
 
     <script>
-        /* --- IOT CORE ENGINE --- */
-        const iot = {
-            socket: null,
-            mode: 'auto',
-            relays: { exhaust: false, peltier: false, pump_w: false, pump_n: false },
-
-            connect() {
-                // UPDATE THIS URL TO YOUR RENDER APP
-                this.socket = io("https://greenhouse-app.onrender.com");
-
-                this.socket.on('connect', () => {
-                    document.getElementById('uplink-dot').classList.add('active');
-                    document.getElementById('uplink-label').innerText = "SECURE SERIAL UPLINK ACTIVE";
-                    document.getElementById('uplink-label').style.color = "var(--green)";
-                });
-
-                this.socket.on('data', (data) => {
-                    if(data.temp) document.getElementById('val-temp').innerText = data.temp.toFixed(1) + "°";
-                    if(data.hum) document.getElementById('val-hum').innerText = data.hum.toFixed(1) + "%";
-                    if(data.soil1) document.getElementById('val-soil1').innerText = data.soil1 + "%";
-                    if(data.soil2) document.getElementById('val-soil2').innerText = data.soil2 + "%";
-                    if(data.n !== undefined) {
-                        document.getElementById('val-npk').innerText = `${data.n} | ${data.p} | ${data.k}`;
-                    }
-                });
-
-                this.socket.on('frame', (base64) => {
-                    document.getElementById('mjpeg-stream').src = "data:image/jpeg;base64," + base64;
-                });
-            },
-
-            toggleMode() {
-                this.mode = (this.mode === 'auto') ? 'manual' : 'auto';
-                const btn = document.getElementById('mode-toggle');
-                const controls = document.getElementById('manual-controls');
-                
-                if(this.mode === 'manual') {
-                    btn.innerText = "SYSTEM STATUS: MANUAL OVERRIDE";
-                    btn.classList.add('manual');
-                    controls.style.opacity = "1";
-                    controls.style.pointerEvents = "auto";
-                } else {
-                    btn.innerText = "SYSTEM STATUS: AUTOMATED";
-                    btn.classList.remove('manual');
-                    controls.style.opacity = "0.2";
-                    controls.style.pointerEvents = "none";
-                }
-
-                this.socket.emit('command', { mode: this.mode });
-            },
-
-            setRelay(key) {
-                if(this.mode !== 'manual') return;
-                this.relays[key] = !this.relays[key];
-                const btn = document.getElementById('btn-' + key);
-                
-                if(this.relays[key]) {
-                    btn.classList.add('active');
-                    btn.innerText = "ON";
-                } else {
-                    btn.classList.remove('active');
-                    btn.innerText = "OFF";
-                }
-
-                // Push JSON to Arduino [cite: 19, 20, 21]
-                this.socket.emit('command', { [key]: this.relays[key] });
-            },
-
-            pushConfig() {
-                const t = parseFloat(document.getElementById('target-temp').value);
-                const s = parseFloat(document.getElementById('target-moisture').value);
-                
-                // Safety logic validation
-                if(t > 48 || t < 4) {
-                    alert("PRO-SHIELD: Target temperature rejected for plant safety.");
-                    return;
-                }
-
-                this.socket.emit('command', { targetTemp: t, targetSoil: s });
-                alert("PARAMETERS SYNCHRONIZED.");
-            }
+        // --- CONFIGURATION ---
+        // REPLACE THIS IP WITH YOUR ARDUINO'S IP ADDRESS
+        const ARDUINO_IP = "http://192.168.4.1"; 
+        
+        // --- FAILSAFE STATE MANAGEMENT ---
+        const state = {
+            sensors: { temp: 0, hum: 0, soil: 0, n: 0, p: 0, k: 0 },
+            connection: false,
+            errorCount: 0,
+            lastUpdate: 0
         };
 
-        /* --- UI ENGINE --- */
-        const actions = {
-            nav(pageId, el) {
-                document.querySelectorAll('.app-page').forEach(p => p.classList.remove('visible'));
-                document.querySelectorAll('.dock-item').forEach(d => d.classList.remove('active'));
-                
-                document.getElementById('page-' + pageId).classList.add('visible');
-                el.classList.add('active');
-            },
-
-            toggleFS() {
-                document.getElementById('camera-viewport').classList.toggle('fullscreen');
-            }
-        };
-
-        /* --- SYNTHETOS V5.0 HIGH-PERFORMANCE ENGINE --- */
-        const game = {
-            canvas: document.getElementById('game-canvas'),
-            ctx: document.getElementById('game-canvas').getContext('2d'),
-            active: false,
-            paused: false,
-            width: 0, height: 0,
+        // --- NAVIGATION ---
+        function showSection(id) {
+            document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
             
-            // Core Entities
-            player: { x:0, y:0, r:22, hp:100, speed:8.5, bullets:[], dashTime:0, dashCool:0, invul:false },
-            boss: { x:0, y:0, r:85, hp:1200, timer:0, phase:0, projectiles:[], angle:0 },
-            keys: {},
+            // Highlight nav button
+            const btnIndex = ['dashboard','thresholds','camera','minigame'].indexOf(id);
+            if(btnIndex >= 0) document.querySelectorAll('nav button')[btnIndex].classList.add('active');
 
-            init() {
-                this.active = true;
-                document.getElementById('threat-engagement-layer').style.display = 'block';
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-                this.loop();
-            },
-
-            resize() {
-                this.width = window.innerWidth;
-                this.height = window.innerHeight;
-                this.canvas.width = this.width;
-                this.canvas.height = this.height;
-            },
-
-            start() {
-                document.getElementById('modal-start').style.display = 'none';
-                document.getElementById('modal-end').style.display = 'none';
-                this.player = { x: this.width/2, y: this.height-150, r:22, hp:100, speed:8.5, bullets:[], dashTime:0, dashCool:0, invul:false };
-                this.boss = { x: this.width/2, y: 200, r:85, hp:1200, timer:0, phase:0, projectiles:[], angle:0 };
-                this.paused = false;
-            },
-
-            togglePause() {
-                this.paused = !this.paused;
-                document.getElementById('pause-btn').innerText = this.paused ? "▶" : "II";
-            },
-
-            close() {
-                this.active = false;
-                document.getElementById('threat-engagement-layer').style.display = 'none';
-            },
-
-            drawGrid() {
-                // ANTI-DIZZY ENGINE: STATIC COORDINATE ANCHORS
-                this.ctx.strokeStyle = "rgba(0, 243, 255, 0.04)";
-                this.ctx.lineWidth = 1;
-                const gap = 70;
-                for(let x=0; x<this.width; x+=gap) {
-                    this.ctx.beginPath(); this.ctx.moveTo(x,0); this.ctx.lineTo(x,this.height); this.ctx.stroke();
-                }
-                for(let y=0; y<this.height; y+=gap) {
-                    this.ctx.beginPath(); this.ctx.moveTo(0,y); this.ctx.lineTo(this.width,y); this.ctx.stroke();
-                }
-            },
-
-            update() {
-                if(this.paused) return;
-
-                const p = this.player;
-                const b = this.boss;
-
-                // 1. UNIT NAVIGATION
-                let dx = 0, dy = 0;
-                if(this.keys['w'] || this.keys['ArrowUp']) dy = -1;
-                if(this.keys['s'] || this.keys['ArrowDown']) dy = 1;
-                if(this.keys['a'] || this.keys['ArrowLeft']) dx = -1;
-                if(this.keys['d'] || this.keys['ArrowRight']) dx = 1;
-
-                // Dash Logic
-                if(p.dashCool > 0) p.dashCool--;
-                if(this.keys['Shift'] && p.dashCool <= 0) { p.dashTime = 12; p.dashCool = 70; p.invul = true; }
-
-                let speed = (p.dashTime > 0) ? p.speed * 3 : p.speed;
-                if(p.dashTime > 0) p.dashTime--; else p.invul = false;
-
-                p.x += dx * speed;
-                p.y += dy * speed;
-
-                // Bound check
-                p.x = Math.max(p.r, Math.min(this.width - p.r, p.x));
-                p.y = Math.max(p.r, Math.min(this.height - p.r, p.y));
-
-                // 2. DISCHARGE PULSE CANNON
-                if(this.keys[' '] && p.bullets.length < 20) {
-                    p.bullets.push({x: p.x, y: p.y - 30, vy: -18});
-                    this.keys[' '] = false; // Semi-auto logic
-                }
-
-                p.bullets.forEach((bull, i) => {
-                    bull.y += bull.vy;
-                    if(Math.hypot(bull.x - b.x, bull.y - b.y) < b.r) {
-                        b.hp -= 15;
-                        p.bullets.splice(i, 1);
-                    }
-                    if(bull.y < 0) p.bullets.splice(i, 1);
-                });
-
-                // 3. BOSS AI ENGINE: 7-PHASE DEPLOYMENT
-                b.timer++;
-                if(b.timer % 240 === 0) b.phase = (b.phase + 1) % 7;
-
-                // Firing logic
-                if(b.timer % 12 === 0) {
-                    switch(b.phase) {
-                        case 0: // Spiral Pulse
-                            b.angle += 0.5;
-                            b.projectiles.push({x: b.x, y: b.y, vx: Math.cos(b.angle)*6.5, vy: Math.sin(b.angle)*6.5, r: 8, c: "var(--pink)"});
-                            break;
-                        case 1: // Seeking Spores
-                            if(b.timer % 60 === 0) b.projectiles.push({x: b.x, y: b.y, vx: 0, vy: 0, r: 12, c: "var(--yellow)", seeking: true});
-                            break;
-                        case 2: // Horizontal Slashes
-                            b.projectiles.push({x: 0, y: Math.random()*this.height, vx: 12, vy:0, r: 10, c: "#fff"});
-                            break;
-                        case 4: // Vertical Rain
-                            b.projectiles.push({x: Math.random()*this.width, y: 0, vx: 0, vy: 14, r: 8, c: "var(--green)"});
-                            break;
-                    }
-                }
-
-                b.projectiles.forEach((pr, i) => {
-                    if(pr.seeking) {
-                        let ang = Math.atan2(p.y - pr.y, p.x - pr.x);
-                        pr.vx = Math.cos(ang) * 4;
-                        pr.vy = Math.sin(ang) * 4;
-                    }
-                    pr.x += pr.vx;
-                    pr.y += pr.vy;
-
-                    // Collision
-                    if(!p.invul && Math.hypot(pr.x - p.x, pr.y - p.y) < pr.r + p.r) {
-                        p.hp -= 4;
-                        b.projectiles.splice(i, 1);
-                    }
-                    // Off-screen
-                    if(pr.y > this.height || pr.x > this.width || pr.x < 0) b.projectiles.splice(i, 1);
-                });
-
-                // 4. WIN/LOSS STATE
-                document.getElementById('hp-player').style.width = p.hp + "%";
-                document.getElementById('hp-boss').style.width = (b.hp / 12) + "%";
-
-                if(p.hp <= 0) this.gameOver("UNIT DESTROYED", "BIO-THREAT BREACHED CONTAINMENT");
-                if(b.hp <= 0) this.gameOver("CORE NEUTRALIZED", "SECTOR 7 SECURED");
-            },
-
-            draw() {
-                const ctx = this.ctx;
-                ctx.fillStyle = "#010103";
-                ctx.fillRect(0,0,this.width, this.height);
-                this.drawGrid();
-
-                // Player Unit
-                ctx.save();
-                ctx.translate(this.player.x, this.player.y);
-                ctx.strokeStyle = this.player.invul ? "#fff" : "var(--cyan)";
-                ctx.lineWidth = 4;
-                ctx.strokeRect(-20, -20, 40, 40);
-                if(this.player.dashTime > 0) {
-                    ctx.strokeStyle = "rgba(0, 243, 255, 0.3)";
-                    ctx.strokeRect(-30, -30, 60, 60);
-                }
-                ctx.restore();
-
-                // Boss Core
-                ctx.save();
-                ctx.translate(this.boss.x, this.boss.y);
-                const pulse = 1 + Math.sin(this.boss.timer * 0.08) * 0.05;
-                ctx.scale(pulse, pulse);
-                ctx.fillStyle = "var(--pink)";
-                ctx.beginPath();
-                ctx.arc(0, 0, this.boss.r, 0, Math.PI*2);
-                ctx.fill();
-                ctx.strokeStyle = "#fff";
-                ctx.lineWidth = 5;
-                ctx.stroke();
-                ctx.restore();
-
-                // Bullets & Projectiles
-                ctx.fillStyle = "var(--yellow)";
-                this.player.bullets.forEach(b => ctx.fillRect(b.x-2, b.y, 4, 15));
-
-                this.boss.projectiles.forEach(pr => {
-                    ctx.fillStyle = pr.c;
-                    ctx.beginPath();
-                    ctx.arc(pr.x, pr.y, pr.r, 0, Math.PI*2);
-                    ctx.fill();
-                });
-            },
-
-            gameOver(title, msg) {
-                this.paused = true;
-                document.getElementById('modal-end').style.display = 'flex';
-                document.getElementById('end-title').innerText = title;
-                document.getElementById('end-msg').innerText = msg;
-                document.getElementById('end-title').style.color = title.includes("NEUTRALIZED") ? "var(--green)" : "var(--pink)";
-            },
-
-            loop() {
-                if(!this.active) return;
-                this.update();
-                this.draw();
-                requestAnimationFrame(() => this.loop());
+            if(id === 'minigame') {
+                if(!gameLoopId && !game.gameOver) requestAnimationFrame(gameLoop);
+            } else {
+                // Ideally pause game when leaving tab to save resources
+                if(!game.paused && !game.gameOver) togglePause();
             }
+        }
+
+        // --- HELP SYSTEM ---
+        const helpData = {
+            'dash': { title: 'Dashboard', text: 'Real-time readings from the Biodome sensors. Data refreshes automatically.' },
+            'thresh': { title: 'Thresholds', text: 'Set minimum values for automation. If sensors drop below these numbers, the Arduino will trigger pumps/lights.' },
+            'cam': { title: 'Camera', text: 'Live view inside the greenhouse. Double-click the video to view fullscreen.' }
         };
 
-        // Event Management
-        window.addEventListener('keydown', e => game.keys[e.key] = true);
-        window.addEventListener('keyup', e => game.keys[e.key] = false);
+        function openHelp(key) {
+            const data = helpData[key];
+            document.getElementById('help-title').innerText = data.title;
+            document.getElementById('help-text').innerText = data.text;
+            document.getElementById('help-modal').style.display = 'flex';
+        }
 
-        // System Boot
-        iot.connect();
+        function closeHelp() {
+            document.getElementById('help-modal').style.display = 'none';
+        }
+
+        // --- COMMUNICATION & FAILSAFES ---
+        function updateStatus(msg, type) {
+            const el = document.getElementById('status-bar');
+            el.innerText = msg;
+            el.className = type === 'error' ? 'error-msg' : (type === 'success' ? 'success-msg' : '');
+        }
+
+        async function fetchData() {
+            try {
+                // Failsafe: Timeout to prevent hanging
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const response = await fetch(`${ARDUINO_IP}/data`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error("Server response not OK");
+
+                const data = await response.json();
+                
+                // Update State
+                state.sensors = data;
+                state.connection = true;
+                state.errorCount = 0;
+                state.lastUpdate = Date.now();
+
+                // Update UI
+                document.getElementById('val-temp').innerText = data.temp || '--';
+                document.getElementById('val-hum').innerText = data.hum || '--';
+                document.getElementById('val-soil').innerText = data.soil || '--';
+                document.getElementById('val-n').innerText = data.n || '--';
+                document.getElementById('val-p').innerText = data.p || '--';
+                document.getElementById('val-k').innerText = data.k || '--';
+
+                updateStatus(`Connected. Last sync: ${new Date().toLocaleTimeString()}`, 'success');
+
+            } catch (error) {
+                state.connection = false;
+                state.errorCount++;
+                console.error("Fetch error:", error);
+                
+                // Adaptive polling: slow down if errors persist to prevent flooding
+                let msg = "Connection lost. Retrying...";
+                if (state.errorCount > 5) msg = "Device offline. Check power/network.";
+                updateStatus(msg, 'error');
+            }
+        }
+
+        async function saveSettings() {
+            // Validation Failsafe
+            const inputs = ['in-temp', 'in-hum', 'in-soil', 'in-n', 'in-p', 'in-k'];
+            const payload = {};
+            let valid = true;
+
+            inputs.forEach(id => {
+                const val = parseFloat(document.getElementById(id).value);
+                if (isNaN(val) || val < 0) valid = false;
+                payload[id.replace('in-', '')] = val;
+            });
+
+            if (!valid) {
+                alert("Please enter valid positive numbers for all fields.");
+                return;
+            }
+
+            try {
+                updateStatus("Sending settings...", "");
+                const response = await fetch(`${ARDUINO_IP}/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    updateStatus("Settings Saved Successfully", "success");
+                    alert("Settings updated!");
+                } else {
+                    throw new Error("Save failed");
+                }
+            } catch (e) {
+                updateStatus("Failed to save settings.", "error");
+                alert("Error saving settings. Check connection.");
+            }
+        }
+
+        // Poll data every 2 seconds
+        setInterval(fetchData, 2000);
+
+        // --- CAMERA LOGIC ---
+        const camFeed = document.getElementById('camera-feed');
+        
+        // Use a dummy stream update or MJPEG stream if available
+        // For compatibility, we set the source. If it's a static image refresh:
+        // setInterval(() => camFeed.src = ARDUINO_IP + "/cam?t=" + new Date().getTime(), 1000);
+        // Assuming MJPEG stream for smoother video:
+        camFeed.src = `${ARDUINO_IP}/stream`; 
+        
+        // Double Click Enlarge
+        camFeed.addEventListener('dblclick', () => {
+            camFeed.classList.toggle('enlarged');
+        });
+        
+        // Touch support for double tap
+        let lastTap = 0;
+        camFeed.addEventListener('touchend', (e) => {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 500 && tapLength > 0) {
+                camFeed.classList.toggle('enlarged');
+                e.preventDefault();
+            }
+            lastTap = currentTime;
+        });
+
+        // --- MINIGAME LOGIC (Version 5 - Enhanced) ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameLoopId;
+
+        const game = {
+            state: 'START', // START, INTRO, PLAY, GAMEOVER
+            paused: false,
+            width: canvas.width,
+            height: canvas.height,
+            score: 0,
+            level: 1
+        };
+
+        // Movement Fix: Use a keys object to handle multiple key presses smoothly
+        const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, a: false, s: false, d: false, " ": false };
+
+        window.addEventListener('keydown', e => {
+            if(keys.hasOwnProperty(e.key) || keys.hasOwnProperty(e.key.toLowerCase())) {
+                keys[e.key] = true;
+                if(e.key === " " && game.state === 'START') startGame();
+                if(e.key === " " && game.state === 'GAMEOVER') startGame();
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            if(keys.hasOwnProperty(e.key)) keys[e.key] = false;
+        });
+
+        // Entities
+        const player = { x: 300, y: 350, w: 20, h: 20, speed: 5, color: '#00ff00' };
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
+        let boss = null;
+
+        function startGame() {
+            game.score = 0;
+            game.level = 1;
+            player.x = 300; 
+            player.y = 350;
+            bullets = [];
+            enemies = [];
+            particles = [];
+            boss = null;
+            game.state = 'PLAY';
+            game.paused = false;
+            document.getElementById('game-overlay').style.display = 'none';
+            document.getElementById('score-display').innerText = 'Score: 0';
+            requestAnimationFrame(gameLoop);
+        }
+
+        function togglePause() {
+            if(game.state !== 'PLAY' && game.state !== 'INTRO') return;
+            game.paused = !game.paused;
+            document.getElementById('overlay-title').innerText = game.paused ? "PAUSED" : "";
+            document.getElementById('overlay-sub').innerText = game.paused ? "Click Pause to Resume" : "";
+            document.getElementById('game-overlay').style.display = game.paused ? "block" : "none";
+        }
+
+        // Draw Complex Shapes (Simple Primitives)
+        function drawPlayer(ctx, x, y) {
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.moveTo(x, y - 15);
+            ctx.lineTo(x - 10, y + 10);
+            ctx.lineTo(x + 10, y + 10);
+            ctx.closePath();
+            ctx.fill();
+            // Engine flame
+            if(Math.random() > 0.5) {
+                ctx.fillStyle = 'orange';
+                ctx.beginPath();
+                ctx.moveTo(x - 5, y + 10);
+                ctx.lineTo(x, y + 18);
+                ctx.lineTo(x + 5, y + 10);
+                ctx.fill();
+            }
+        }
+
+        function drawEnemy(ctx, e) {
+            ctx.save();
+            ctx.translate(e.x, e.y);
+            ctx.rotate(e.angle); // Rotate for complexity
+            ctx.fillStyle = e.type === 1 ? '#ff4444' : '#ffbb33';
+            ctx.fillRect(-e.w/2, -e.h/2, e.w, e.h);
+            // Detail
+            ctx.fillStyle = 'black';
+            ctx.fillRect(-e.w/4, -e.h/4, e.w/2, e.h/2);
+            ctx.restore();
+        }
+
+        function drawBoss(ctx, b) {
+            ctx.save();
+            ctx.translate(b.x, b.y);
+            // Intro animation effect
+            if (game.state === 'INTRO') {
+               ctx.scale(b.introScale, b.introScale);
+            }
+            
+            // Complex Hexagon Boss
+            ctx.fillStyle = '#9c27b0';
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                ctx.lineTo(50 * Math.cos(i * 2 * Math.PI / 6), 50 * Math.sin(i * 2 * Math.PI / 6));
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // Rotating Shield
+            ctx.rotate(Date.now() / 500);
+            ctx.strokeStyle = '#e040fb';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(0, 0, 70, 0, Math.PI * 1.5);
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+
+        function update() {
+            if(game.paused) return;
+
+            // Player Movement
+            if ((keys.ArrowLeft || keys.a) && player.x > 10) player.x -= player.speed;
+            if ((keys.ArrowRight || keys.d) && player.x < game.width - 10) player.x += player.speed;
+            if ((keys.ArrowUp || keys.w) && player.y > 10) player.y -= player.speed;
+            if ((keys.ArrowDown || keys.s) && player.y < game.height - 10) player.y += player.speed;
+
+            // Shooting
+            if (keys[" "]) {
+                if(bullets.length === 0 || bullets[bullets.length-1].y < player.y - 15) { // Fire rate limit
+                    bullets.push({ x: player.x, y: player.y - 15, w: 4, h: 10, c: '#ffff00' });
+                }
+            }
+
+            // Bullets
+            for(let i=bullets.length-1; i>=0; i--) {
+                bullets[i].y -= 10;
+                if(bullets[i].y < 0) bullets.splice(i, 1);
+            }
+
+            // Boss Logic
+            if(game.score > 500 && !boss) {
+                game.state = 'INTRO';
+                boss = { x: game.width/2, y: -100, hp: 50, introScale: 0.1, targetY: 100 };
+            }
+
+            if(game.state === 'INTRO') {
+                boss.y += (boss.targetY - boss.y) * 0.05;
+                boss.introScale += (1 - boss.introScale) * 0.05;
+                if(Math.abs(boss.y - boss.targetY) < 1) {
+                    game.state = 'PLAY'; // Boss fight starts
+                }
+                return; // Stop other updates during intro
+            }
+
+            if(boss) {
+                boss.x += Math.sin(Date.now()/500) * 2;
+                // Boss Collision
+                bullets.forEach((b, bi) => {
+                    let dx = b.x - boss.x;
+                    let dy = b.y - boss.y;
+                    if(Math.sqrt(dx*dx + dy*dy) < 50) {
+                        boss.hp--;
+                        bullets.splice(bi, 1);
+                        particles.push({x: b.x, y: b.y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, life: 20});
+                        if(boss.hp <= 0) {
+                            boss = null;
+                            game.score += 1000; // Bonus
+                        }
+                    }
+                });
+            } else {
+                // Spawning Enemies
+                if(Math.random() < 0.02 + (game.score/10000)) {
+                    enemies.push({ 
+                        x: Math.random() * (game.width - 20) + 10, 
+                        y: -20, 
+                        w: 20, 
+                        h: 20, 
+                        type: Math.random()>0.8?2:1,
+                        angle: 0 
+                    });
+                }
+            }
+
+            // Enemies Update
+            for(let i=enemies.length-1; i>=0; i--) {
+                let e = enemies[i];
+                e.y += 3;
+                e.angle += 0.1;
+
+                if(e.y > game.height) enemies.splice(i, 1);
+
+                // Collision Player
+                if (Math.abs(e.x - player.x) < 20 && Math.abs(e.y - player.y) < 20) {
+                    endGame();
+                }
+
+                // Collision Bullets
+                for(let j=bullets.length-1; j>=0; j--) {
+                    let b = bullets[j];
+                    if(Math.abs(e.x - b.x) < e.w && Math.abs(e.y - b.y) < e.h) {
+                        enemies.splice(i, 1);
+                        bullets.splice(j, 1);
+                        game.score += 10;
+                        document.getElementById('score-display').innerText = 'Score: ' + game.score;
+                        // Explosion particles
+                        for(let p=0; p<5; p++) {
+                            particles.push({x: e.x, y: e.y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 15});
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Particles
+            for(let i=particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            // Background - Clear with slightly transparent black for trail effect (optional, removed for dizziness prevention)
+            ctx.fillStyle = '#000000'; 
+            ctx.fillRect(0, 0, game.width, game.height);
+
+            // Draw Particles
+            ctx.fillStyle = '#ffff00';
+            particles.forEach(p => ctx.fillRect(p.x, p.y, 2, 2));
+
+            if(game.state === 'PLAY' || game.state === 'INTRO') {
+                drawPlayer(ctx, player.x, player.y);
+                bullets.forEach(b => { ctx.fillStyle=b.c; ctx.fillRect(b.x-2, b.y, b.w, b.h); });
+                enemies.forEach(e => drawEnemy(ctx, e));
+                if(boss) drawBoss(ctx, boss);
+            }
+        }
+
+        function endGame() {
+            game.state = 'GAMEOVER';
+            document.getElementById('overlay-title').innerText = "GAME OVER";
+            document.getElementById('overlay-sub').innerText = "Final Score: " + game.score + " - Press Space to Retry";
+            document.getElementById('game-overlay').style.display = 'block';
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            if(game.state !== 'GAMEOVER' || particles.length > 0) {
+                gameLoopId = requestAnimationFrame(gameLoop);
+            }
+        }
     </script>
 </body>
 </html>
