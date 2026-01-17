@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BioDome OS v5.0 | Secure Interface</title>
+    <title>BioDome OS v5.0 | Advanced Security & Control</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
     
@@ -13,292 +13,337 @@
             --pink: #ff0055;
             --green: #39ff14;
             --yellow: #ffd700;
-            --dark-bg: #030308;
-            --panel: rgba(15, 15, 25, 0.98);
+            --dark-bg: #020205;
+            --panel-bg: rgba(10, 10, 20, 0.95);
+            --border-glow: 0 0 10px rgba(0, 243, 255, 0.2);
         }
 
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        /* --- GLOBAL RESET & THEME --- */
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
         body {
             font-family: 'Rajdhani', sans-serif; background: var(--dark-bg); color: white;
             margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column;
         }
 
-        /* --- UI HEADER --- */
+        /* --- HEADER & STATUS --- */
         .status-bar {
-            height: 65px; display: flex; justify-content: space-between; align-items: center;
-            padding: 0 25px; background: #000; border-bottom: 2px solid #1a1a1a; z-index: 1000;
+            height: 60px; display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; background: #000; border-bottom: 2px solid #111; z-index: 1000;
         }
-        .brand { font-family: 'Orbitron'; font-weight: 900; color: var(--cyan); letter-spacing: 3px; text-shadow: 0 0 10px rgba(0,243,255,0.3); }
+        .brand { font-family: 'Orbitron'; font-weight: 900; color: var(--cyan); letter-spacing: 2px; }
+        .sys-info { display: flex; align-items: center; gap: 15px; font-size: 0.7rem; font-weight: 700; color: #555; }
+        .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff0055; transition: 0.3s; }
+        .conn-dot.online { background: var(--green); box-shadow: 0 0 8px var(--green); }
 
+        /* --- VIEWPORT LOGIC --- */
         #app-viewport { flex: 1; position: relative; overflow-y: auto; padding-bottom: 100px; }
-        .page { display: none; padding: 25px; max-width: 900px; margin: 0 auto; animation: fadeIn 0.4s ease; }
+        .page { display: none; padding: 20px; max-width: 900px; margin: 0 auto; animation: pageIn 0.4s ease; }
         .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pageIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* --- CARDS & HELP SYSTEM --- */
         .card {
-            background: var(--panel); border: 1px solid rgba(255,255,255,0.08);
+            background: var(--panel-bg); border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 12px; padding: 25px; margin-bottom: 20px; position: relative;
-            box-shadow: 0 15px 45px rgba(0,0,0,0.8);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
         }
-        h2 { font-family: 'Orbitron'; font-size: 0.9rem; margin: 0 0 20px 0; color: #888; border-bottom: 1px solid #222; padding-bottom: 10px; }
-
-        /* --- RESTORED: HELP TOOLTIPS --- */
-        .help-icon {
-            position: absolute; top: 20px; right: 20px; width: 24px; height: 24px;
+        .card h2 { margin: 0 0 15px 0; font-family: 'Orbitron'; font-size: 0.85rem; color: #aaa; letter-spacing: 1px; }
+        
+        .help-btn {
+            position: absolute; top: 20px; right: 20px; width: 22px; height: 22px;
             border: 1px solid var(--cyan); color: var(--cyan); border-radius: 50%;
-            text-align: center; line-height: 22px; font-size: 0.75rem; cursor: pointer; transition: 0.3s;
+            text-align: center; line-height: 20px; font-size: 0.7rem; cursor: pointer; transition: 0.2s;
         }
-        .help-icon:hover { background: var(--cyan); color: #000; }
+        .help-btn:hover { background: var(--cyan); color: #000; }
 
-        /* --- CAMERA SYSTEM (V5: Rotate & Zoom) --- */
+        /* --- CAMERA & FAILSAFES --- */
         .cam-frame {
-            width: 100%; height: 240px; background: #050505; border-radius: 8px;
-            overflow: hidden; position: relative; cursor: zoom-in; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%; height: 250px; background: #000; border-radius: 8px;
+            overflow: hidden; position: relative; border: 1px solid #222; cursor: zoom-in;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .cam-frame.fullscreen {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; border-radius: 0;
+        .cam-frame.expanded {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 9999; border-radius: 0;
         }
-        .cam-stream {
+        .cam-img {
             width: 100%; height: 100%; object-fit: cover;
-            transform: rotate(180deg); /* PHYSICAL ORIENTATION FIX */
+            transform: rotate(180deg); /* PHYSICAL CAMERA CORRECTION */
         }
 
-        /* --- SENSOR TELEMETRY --- */
-        .telemetry-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .stat-box { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-        .stat-val { display: block; font-family: 'Orbitron'; font-size: 2rem; color: #fff; }
-        .stat-lbl { font-size: 0.7rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 1.5px; }
+        /* --- SENSOR INTERFACE --- */
+        .sensor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .sensor-box { background: rgba(255,255,255,0.02); padding: 20px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.04); }
+        .s-val { display: block; font-family: 'Orbitron'; font-size: 1.8rem; color: #fff; margin-bottom: 4px; }
+        .s-lbl { font-size: 0.65rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* --- MANUAL OVERRIDE (Pins Removed) --- */
-        .relay-ctrl {
+        /* --- CONTROL BUTTONS --- */
+        .ctrl-row {
             display: flex; justify-content: space-between; align-items: center;
-            background: rgba(255,255,255,0.02); padding: 15px; border-radius: 6px; margin-bottom: 12px;
+            background: rgba(255,255,255,0.03); padding: 15px; border-radius: 6px; margin-bottom: 10px;
         }
         .btn-toggle {
-            padding: 10px 25px; font-family: 'Orbitron'; border-radius: 4px; border: 1px solid #444;
-            background: #111; color: #666; cursor: pointer; transition: 0.3s;
+            padding: 10px 25px; font-family: 'Orbitron'; border: 1px solid #444; background: #111;
+            color: #555; border-radius: 4px; cursor: pointer; transition: 0.3s;
         }
-        .btn-toggle.active { background: var(--cyan); color: #000; border-color: var(--cyan); box-shadow: 0 0 15px rgba(0,243,255,0.3); }
+        .btn-toggle.on { background: var(--cyan); color: #000; border-color: var(--cyan); box-shadow: 0 0 15px rgba(0,243,255,0.3); }
+        .mode-btn { border-color: var(--pink); color: var(--pink); background: transparent; }
+        .mode-btn.manual { background: var(--pink); color: #fff; }
 
-        /* --- CONFIG & FAILSAFES --- */
-        .input-wrap { margin-bottom: 20px; }
-        .input-wrap label { display: block; font-size: 0.7rem; color: #888; margin-bottom: 8px; }
-        .input-wrap input {
-            width: 100%; background: #000; border: 1px solid #333; color: #fff;
-            padding: 15px; border-radius: 6px; font-family: 'Orbitron';
+        /* --- INPUT FIELDS & ERROR HANDLING --- */
+        .field { margin-bottom: 15px; }
+        .field label { display: block; font-size: 0.7rem; color: #777; margin-bottom: 5px; text-transform: uppercase; }
+        .field input {
+            width: 100%; background: #000; border: 1px solid #333; color: white;
+            padding: 12px; font-family: 'Orbitron'; border-radius: 4px; transition: 0.3s;
         }
+        .field input:focus { border-color: var(--cyan); }
         .btn-save {
-            width: 100%; padding: 18px; background: var(--green); color: #000;
-            border: none; font-family: 'Orbitron'; font-weight: 900; border-radius: 6px; cursor: pointer;
+            width: 100%; padding: 16px; background: var(--green); color: #000;
+            border: none; font-family: 'Orbitron'; font-weight: 900; border-radius: 4px; cursor: pointer;
         }
 
         /* --- NAVIGATION --- */
         .nav-dock {
-            position: fixed; bottom: 0; width: 100%; height: 85px;
-            background: #080810; border-top: 1px solid #222;
+            position: fixed; bottom: 0; width: 100%; height: 80px;
+            background: #050508; border-top: 1px solid #111;
             display: flex; justify-content: space-around; align-items: center; z-index: 1000;
         }
-        .nav-btn { text-align: center; color: #444; font-size: 0.7rem; cursor: pointer; flex: 1; transition: 0.3s; }
-        .nav-btn.active { color: var(--cyan); }
-        .nav-btn i { font-size: 1.5rem; display: block; margin-bottom: 5px; }
+        .nav-item { color: #444; text-align: center; cursor: pointer; transition: 0.2s; flex: 1; }
+        .nav-item.active { color: var(--cyan); }
+        .nav-item i { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+        .nav-item span { font-size: 0.6rem; font-weight: 700; letter-spacing: 1px; }
 
         /* --- MINIGAME LAYER --- */
-        #game-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; display: none; }
-        #canvas { width: 100%; height: 100%; }
+        #game-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; display: none; }
+        #canvas { display: block; width: 100%; height: 100%; }
         
         .game-hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .pause-btn {
+        .hud-pause {
             position: absolute; top: 25px; left: 25px; width: 50px; height: 50px;
-            background: rgba(0,0,0,0.5); border: 2px solid var(--cyan); color: var(--cyan);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-family: 'Orbitron'; pointer-events: auto; cursor: pointer;
+            background: rgba(0,0,0,0.6); border: 2px solid var(--cyan); color: var(--cyan);
+            border-radius: 50%; pointer-events: auto; display: flex; align-items: center; justify-content: center;
+            font-family: 'Orbitron'; cursor: pointer;
         }
 
-        .boss-intro {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; animation: pulseRed 2s infinite; pointer-events: none;
+        /* Boss Intro Overlay */
+        #boss-intro {
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background: rgba(0,0,0,0.9); display:none; flex-direction:column;
+            align-items:center; justify-content:center; text-align:center; z-index: 6000;
         }
-        @keyframes pulseRed { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .alert-text { font-family: 'Orbitron'; color: var(--pink); font-size: 3rem; animation: blink 0.5s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Failsafe Local Notification */
+        #sys-msg {
+            position: fixed; top: 20px; right: 20px; background: var(--pink);
+            padding: 10px 20px; border-radius: 4px; font-weight: 700; font-size: 0.8rem;
+            transform: translateX(200%); transition: 0.4s; z-index: 10000;
+        }
     </style>
 </head>
 <body>
 
+    <div id="sys-msg">FAILSAFE ACTIVATED</div>
+
     <div class="status-bar">
         <div class="brand">BIODOME OS v5.0</div>
-        <div id="connection" style="color: var(--pink); font-size: 0.8rem; font-weight: bold;">● LINK DISCONNECTED</div>
+        <div class="sys-info">
+            <span id="conn-lbl">OFFLINE</span>
+            <div id="conn-dot" class="conn-dot"></div>
+        </div>
     </div>
 
     <div id="app-viewport">
-        <div id="page-home" class="page active">
+        <div id="p-home" class="page active">
             <div class="card">
-                <div class="help-icon" onclick="ui.help('home')">?</div>
-                <h2>SURVEILLANCE FEED (V5)</h2>
-                <div class="cam-frame" id="cam-box" ondblclick="ui.toggleFullscreen()">
-                    <img id="cam-feed" class="cam-stream" src="" alt="WAITING FOR UPLINK...">
-                    <div style="position:absolute; bottom:15px; right:15px; font-size:0.6rem; color:var(--cyan);">[SECURE CHANNEL 01]</div>
+                <div class="help-btn" onclick="ui.help('home')">?</div>
+                <h2>SURVEILLANCE MODE</h2>
+                <div class="cam-frame" id="cam-box" ondblclick="ui.zoomCam()">
+                    <img id="stream" class="cam-img" src="" alt="NO SIGNAL">
+                    <div style="position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.5); font-size:0.6rem; padding:3px 8px; border-radius:3px;">HD FEED</div>
                 </div>
+                <p style="font-size: 0.6rem; color: #444; margin-top: 8px;">Physical Camera: 180° Rotated | Logic: Compensated</p>
             </div>
-            
-            <div class="telemetry-grid">
-                <div class="stat-box"><span class="stat-lbl">Ambient Temp</span><span class="stat-val" id="v-temp">--°</span></div>
-                <div class="stat-box"><span class="stat-lbl">Air Humidity</span><span class="stat-val" id="v-hum">--%</span></div>
-                <div class="stat-box" style="grid-column: span 2;">
-                    <span class="stat-lbl">Soil Moisture Level</span>
-                    <span class="stat-val" id="v-soil">--%</span>
+
+            <div class="sensor-grid">
+                <div class="sensor-box"><span class="s-val" id="v-temp">--°</span><span class="s-lbl">Air Temp</span></div>
+                <div class="sensor-box"><span class="s-val" id="v-hum">--%</span><span class="s-lbl">Humidity</span></div>
+                <div class="sensor-box" style="grid-column: span 2;">
+                    <span class="s-val" id="v-soil">--%</span><span class="s-lbl">Avg Soil Moisture</span>
+                </div>
+                <div class="sensor-box" style="grid-column: span 2;">
+                    <div id="v-npk" style="font-family:'Orbitron'; font-size: 1.2rem; margin-bottom: 5px;">-- | -- | --</div>
+                    <span class="s-lbl">Current N-P-K Levels</span>
                 </div>
             </div>
         </div>
 
-        <div id="page-manual" class="page">
+        <div id="p-manual" class="page">
             <div class="card">
-                <div class="help-icon" onclick="ui.help('manual')">?</div>
-                <h2>SYSTEM OVERRIDE</h2>
-                <div class="relay-ctrl">
-                    <span>OPERATION MODE</span>
-                    <button class="btn-toggle" id="m-mode" onclick="iot.mode()">AUTO</button>
+                <div class="help-btn" onclick="ui.help('manual')">?</div>
+                <h2>OVERRIDE SYSTEM</h2>
+                <div class="ctrl-row">
+                    <span>PILOT MODE:</span>
+                    <button id="mode-sel" class="btn-toggle mode-btn" onclick="iot.toggleMode()">AUTO</button>
                 </div>
-                <div id="man-grid" style="opacity: 0.3; pointer-events: none;">
-                    <div class="relay-ctrl"><span>Exhaust System</span><button class="btn-toggle" id="m-exhaust" onclick="iot.relay('exhaust')">OFF</button></div>
-                    <div class="relay-ctrl"><span>Peltier Array</span><button class="btn-toggle" id="m-peltier" onclick="iot.relay('peltier')">OFF</button></div>
-                    <div class="relay-ctrl"><span>Irrigation Pump</span><button class="btn-toggle" id="m-pump_w" onclick="iot.relay('pump_w')">OFF</button></div>
-                    <div class="relay-ctrl"><span>Nutrient Injector</span><button class="btn-toggle" id="m-pump_n" onclick="iot.relay('pump_n')">OFF</button></div>
+                
+                <div id="man-grid" style="opacity: 0.3; pointer-events: none; transition: 0.3s;">
+                    <div class="ctrl-row"><span>Exhaust Fan</span><button class="btn-toggle" id="b-exhaust" onclick="iot.relay('exhaust')">OFF</button></div>
+                    <div class="ctrl-row"><span>Cooling Array</span><button class="btn-toggle" id="b-peltier" onclick="iot.relay('peltier')">OFF</button></div>
+                    <div class="ctrl-row"><span>Irrigation</span><button class="btn-toggle" id="b-pump_w" onclick="iot.relay('pump_w')">OFF</button></div>
+                    <div class="ctrl-row"><span>Nutrients</span><button class="btn-toggle" id="b-pump_n" onclick="iot.relay('pump_n')">OFF</button></div>
                 </div>
             </div>
         </div>
 
-        <div id="page-config" class="page">
+        <div id="p-config" class="page">
             <div class="card">
-                <div class="help-icon" onclick="ui.help('config')">?</div>
-                <h2>BIOLOGICAL THRESHOLDS</h2>
-                <div class="input-wrap">
-                    <label>TARGET TEMPERATURE (°C)</label>
+                <div class="help-btn" onclick="ui.help('config')">?</div>
+                <h2>BIOS TARGETS</h2>
+                <div class="field">
+                    <label>Target Temperature (°C)</label>
                     <input type="number" id="t-temp" value="25">
                 </div>
-                <div class="input-wrap">
-                    <label>CRITICAL SOIL MOISTURE (%)</label>
+                <div class="field">
+                    <label>Min Soil Moisture (%)</label>
                     <input type="number" id="t-soil" value="45">
                 </div>
-                <div class="input-wrap">
-                    <label>NPK CONCENTRATION TARGET</label>
+                <div class="field">
+                    <label>Target NPK Threshold</label>
                     <input type="number" id="t-npk" value="180">
                 </div>
-                <button class="btn-save" onclick="iot.updateConfig()">SAVE TO FIRMWARE</button>
-                <p style="font-size: 0.6rem; color: #555; margin-top: 15px;">Failsafe: Values are validated for plant safety before transmission.</p>
+                <button class="btn-save" onclick="iot.saveConfig()">SYNC TO BIODOME</button>
             </div>
         </div>
     </div>
 
-    <div id="game-view">
+    <div id="game-layer">
         <canvas id="canvas"></canvas>
         <div class="game-hud">
-            <div class="pause-btn" id="p-btn" onclick="game.pause()">II</div>
+            <div class="hud-pause" onclick="game.pause()">II</div>
             
-            <div id="boss-intro" class="boss-intro" style="display:none;">
-                <h1 style="font-family:'Orbitron'; color:var(--pink); font-size:3rem; margin:0;">SYNTHETOS</h1>
-                <p style="color:#fff; letter-spacing:4px;">BIO-THREAT DETECTED</p>
+            <div style="position:absolute; bottom:20px; left:20px; width:200px;">
+                <div style="font-size:0.6rem; color:var(--cyan); font-family:'Orbitron';">DRONE SHIELDS</div>
+                <div style="width:100%; height:10px; background:#111; border:1px solid #333;"><div id="hp-p" style="width:100%; height:100%; background:var(--cyan);"></div></div>
             </div>
-
-            <div style="position:absolute; bottom:20px; left:25px; width:250px;">
-                <div style="font-size:0.7rem; color:var(--cyan); font-family:'Orbitron';">DRONE INTEGRITY</div>
-                <div style="height:10px; background:#111; border:1px solid #333;"><div id="p-hp" style="width:100%; height:100%; background:var(--cyan);"></div></div>
-            </div>
-            <div style="position:absolute; bottom:20px; right:25px; width:250px; text-align:right;">
-                <div style="font-size:0.7rem; color:var(--pink); font-family:'Orbitron';">SYNTHETOS STAMINA</div>
-                <div style="height:10px; background:#111; border:1px solid #333;"><div id="b-hp" style="width:100%; height:100%; background:var(--pink);"></div></div>
+            <div style="position:absolute; bottom:20px; right:20px; width:200px; text-align:right;">
+                <div style="font-size:0.6rem; color:var(--pink); font-family:'Orbitron';">SYNTHETOS CORE</div>
+                <div style="width:100%; height:10px; background:#111; border:1px solid #333;"><div id="hp-b" style="width:100%; height:100%; background:var(--pink);"></div></div>
             </div>
         </div>
 
-        <div id="game-menu" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; align-items:center; justify-content:center;">
-            <h1 style="font-family:'Orbitron'; color:var(--cyan); font-size:3rem;">DRONE PILOT</h1>
-            <p style="color:#555; max-width:400px; text-align:center;">Secure the perimeter from the rogue biological mutation 'Synthetos'.</p>
-            <button class="btn-save" style="width:200px; background:transparent; border:1px solid var(--cyan); color:var(--cyan);" onclick="game.start()">ENGAGE</button>
-            <button class="btn-save" style="width:200px; background:transparent; margin-top:10px; border:1px solid #444; color:#444;" onclick="game.exit()">EXIT</button>
+        <div id="boss-intro">
+            <div class="alert-text">WARNING</div>
+            <p style="font-family:'Orbitron'; color:white; letter-spacing:5px;">SYNTHETOS AWAKENING</p>
+            <p style="color:#666; font-size: 0.8rem; margin-top: 20px;">BIOLOGICAL INFESTATION IN SECTOR 7</p>
+        </div>
+
+        <div id="game-menu" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+            <h1 style="font-family:'Orbitron'; font-size: 3rem; color: var(--pink);">THREAT DETECTED</h1>
+            <p style="color:#888; max-width: 400px; margin-bottom: 30px;">Deploy tactical drone to sanitize the greenhouse from rogue mutations.</p>
+            <button class="btn-save" style="width:200px;" onclick="game.start()">LAUNCH DRONE</button>
+            <button class="btn-save" style="width:200px; margin-top:10px; background:#222; color:#555;" onclick="game.exit()">EXIT</button>
         </div>
     </div>
 
     <nav class="nav-dock">
-        <div class="nav-btn active" onclick="ui.tab('home', this)"><i>🏠</i><span>DASHBOARD</span></div>
-        <div class="nav-btn" onclick="ui.tab('manual', this)"><i>🎛️</i><span>OVERRIDE</span></div>
-        <div class="nav-btn" onclick="ui.tab('config', this)"><i>⚙️</i><span>CONFIG</span></div>
-        <div class="nav-btn" onclick="game.open()" style="color:var(--pink);"><i>👾</i><span>DEFENSE</span></div>
+        <div class="nav-item active" onclick="ui.tab('home', this)"><i>🏠</i><span>HOME</span></div>
+        <div class="nav-item" onclick="ui.tab('manual', this)"><i>🎛️</i><span>MANUAL</span></div>
+        <div class="nav-item" onclick="ui.tab('config', this)"><i>⚙️</i><span>CONFIG</span></div>
+        <div class="nav-item" onclick="game.open()" style="color:var(--pink);"><i>👾</i><span>THREAT</span></div>
     </nav>
 
     <script>
-        // --- IOT & SOCKET CHAIN ---
+        // --- IOT ENGINE (CHAIN OF COMMAND) ---
         const iot = {
             socket: null,
-            isManual: false,
-            states: { exhaust:false, peltier:false, pump_w:false, pump_n:false },
+            manual: false,
+            relays: { exhaust:false, peltier:false, pump_w:false, pump_n:false },
 
             init() {
                 this.socket = io("https://your-render-app.onrender.com");
                 this.socket.on('connect', () => {
-                    const el = document.getElementById('connection');
-                    el.innerText = "● LINK ENCRYPTED"; el.style.color = "var(--green)";
+                    document.getElementById('conn-lbl').innerText = "ONLINE";
+                    document.getElementById('conn-dot').classList.add('online');
                 });
                 this.socket.on('data', d => {
                     if(d.temp) document.getElementById('v-temp').innerText = d.temp.toFixed(1) + "°";
                     if(d.hum) document.getElementById('v-hum').innerText = d.hum.toFixed(1) + "%";
                     if(d.soil1) document.getElementById('v-soil').innerText = d.soil1 + "%";
+                    if(d.n) document.getElementById('v-npk').innerText = `${d.n} | ${d.p} | ${d.k}`;
                 });
-                this.socket.on('frame', f => { document.getElementById('cam-feed').src = "data:image/jpeg;base64," + f; });
+                this.socket.on('frame', f => { document.getElementById('stream').src = "data:image/jpeg;base64," + f; });
             },
 
-            mode() {
-                this.isManual = !this.isManual;
-                const btn = document.getElementById('m-mode');
-                const grid = document.getElementById('man-grid');
-                btn.innerText = this.isManual ? "MANUAL" : "AUTO";
-                btn.style.color = this.isManual ? "var(--pink)" : "#666";
-                grid.style.opacity = this.isManual ? "1" : "0.3";
-                grid.style.pointerEvents = this.isManual ? "auto" : "none";
-                this.socket.emit('command', { mode: this.isManual ? 'manual' : 'auto' });
+            toggleMode() {
+                this.manual = !this.manual;
+                const btn = document.getElementById('mode-sel');
+                btn.innerText = this.manual ? "MANUAL" : "AUTO";
+                btn.classList.toggle('manual', this.manual);
+                document.getElementById('man-grid').style.opacity = this.manual ? "1" : "0.3";
+                document.getElementById('man-grid').style.pointerEvents = this.manual ? "auto" : "none";
+                this.socket.emit('command', { mode: this.manual ? 'manual' : 'auto' });
             },
 
             relay(key) {
-                this.states[key] = !this.states[key];
-                const btn = document.getElementById('m-' + key);
-                btn.classList.toggle('active', this.states[key]);
-                btn.innerText = this.states[key] ? "ON" : "OFF";
-                this.socket.emit('command', { [key]: this.states[key] });
+                this.relays[key] = !this.relays[key];
+                const btn = document.getElementById('b-' + key);
+                btn.classList.toggle('on', this.relays[key]);
+                btn.innerText = this.relays[key] ? "ON" : "OFF";
+                this.socket.emit('command', { [key]: this.relays[key] });
             },
 
-            updateConfig() {
+            saveConfig() {
                 let t = parseFloat(document.getElementById('t-temp').value);
                 let s = parseFloat(document.getElementById('t-soil').value);
                 let n = parseFloat(document.getElementById('t-npk').value);
 
                 // FAILSAFE: Human Error Compensation
-                if(t > 45) { t = 45; alert("Failsafe: Capped temp to 45°C for plant safety."); }
-                if(t < 10) { t = 10; alert("Failsafe: Capped temp to 10°C to prevent freezing."); }
-                
-                document.getElementById('t-temp').value = t;
+                let error = false;
+                if(t > 45) { t = 45; error = true; }
+                if(t < 5) { t = 5; error = true; }
+                if(s > 100) { s = 100; error = true; }
+
+                if(error) {
+                    ui.notify("FAILSAFE: ADJUSTED TO SAFE LIMITS");
+                    document.getElementById('t-temp').value = t;
+                    document.getElementById('t-soil').value = s;
+                }
+
                 this.socket.emit('command', { targetTemp: t, targetSoil: s, targetNPK: n });
             }
         };
 
-        // --- UI & CAMERA LOGIC ---
+        // --- UI UTILITIES ---
         const ui = {
             tab(id, el) {
                 document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
-                document.getElementById('page-' + id).classList.add('active');
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                document.getElementById('p-' + id).classList.add('active');
                 el.classList.add('active');
             },
             help(page) {
                 const msgs = {
-                    home: "LIVE FEED: Double-tap the video to enlarge. Telemetry shows real-time data from Arduino sensors.",
-                    manual: "MANUAL OVERRIDE: Warning - Switching to Manual suspends automated climate control.",
-                    config: "THRESHOLDS: Set the ideal growth parameters. The system will auto-correct to these values."
+                    home: "DASHBOARD: View real-time sensor telemetry and live video. Double-tap the video to expand.",
+                    manual: "OVERRIDE: Enable Manual Mode to directly control fans and pumps. Auto-logic is bypassed.",
+                    config: "TARGETS: Define ideal growth parameters. The Arduino maintains these values automatically."
                 };
                 alert(msgs[page]);
             },
-            toggleFullscreen() {
-                document.getElementById('cam-box').classList.toggle('fullscreen');
+            zoomCam() {
+                document.getElementById('cam-box').classList.toggle('expanded');
+            },
+            notify(txt) {
+                const el = document.getElementById('sys-msg');
+                el.innerText = txt;
+                el.style.transform = "translateX(0)";
+                setTimeout(() => { el.style.transform = "translateX(200%)"; }, 3000);
             }
         };
 
-        // --- MINIGAME V5 (Anti-Dizzy & New Models) ---
+        // --- MINIGAME V5 (ANTI-DIZZY & FIXED PHYSICS) ---
         const game = {
             active: false, paused: false,
             cvs: document.getElementById('canvas'),
@@ -308,7 +353,7 @@
             keys: {},
 
             open() {
-                document.getElementById('game-view').style.display = 'block';
+                document.getElementById('game-layer').style.display = 'block';
                 this.cvs.width = window.innerWidth;
                 this.cvs.height = window.innerHeight;
                 this.active = true;
@@ -317,8 +362,8 @@
 
             start() {
                 document.getElementById('game-menu').style.display = 'none';
-                document.getElementById('boss-intro').style.display = 'block';
-                setTimeout(() => { document.getElementById('boss-intro').style.display = 'none'; }, 3000);
+                document.getElementById('boss-intro').style.display = 'flex';
+                setTimeout(() => { document.getElementById('boss-intro').style.display = 'none'; }, 2500);
                 
                 this.player = { x: this.cvs.width/2, y: this.cvs.height-100, hp:100, bullets:[] };
                 this.boss = { x: this.cvs.width/2, y: 150, hp:1000, timer:0, attacks:[] };
@@ -327,16 +372,16 @@
 
             pause() {
                 this.paused = !this.paused;
-                document.getElementById('p-btn').innerText = this.paused ? "▶" : "II";
+                ui.notify(this.paused ? "SIMULATION PAUSED" : "SIMULATION RESUMED");
             },
 
             exit() {
                 this.active = false;
-                document.getElementById('game-view').style.display = 'none';
+                document.getElementById('game-layer').style.display = 'none';
             },
 
             drawGrid() {
-                // Anti-Dizzy Static Grid
+                // Static Reference Grid for Motion Sickness Prevention
                 this.ctx.strokeStyle = "rgba(0, 243, 255, 0.05)";
                 this.ctx.lineWidth = 1;
                 for(let i=0; i<this.cvs.width; i+=60) {
@@ -357,56 +402,74 @@
             },
 
             update() {
-                // Movement with Bug Fixes (Clamping)
-                let speed = 6;
-                if(this.keys['w'] && this.player.y > 40) this.player.y -= speed;
-                if(this.keys['s'] && this.player.y < this.cvs.height-40) this.player.y += speed;
-                if(this.keys['a'] && this.player.x > 40) this.player.x -= speed;
-                if(this.keys['d'] && this.player.x < this.cvs.width-40) this.player.x += speed;
+                // Diagonal Speed Normalization & Edge Clamping
+                let vx = 0, vy = 0;
+                if(this.keys['w']) vy = -1;
+                if(this.keys['s']) vy = 1;
+                if(this.keys['a']) vx = -1;
+                if(this.keys['d']) vx = 1;
 
-                // Boss Attacks
+                const speed = 7;
+                const mag = Math.hypot(vx, vy);
+                if(mag > 0) {
+                    this.player.x += (vx/mag) * speed;
+                    this.player.y += (vy/mag) * speed;
+                }
+
+                // Hard Clamp (Prevents Sticking)
+                this.player.x = Math.max(30, Math.min(this.cvs.width-30, this.player.x));
+                this.player.y = Math.max(30, Math.min(this.cvs.height-30, this.player.y));
+
+                // Boss AI
                 this.boss.timer++;
-                if(this.boss.timer % 30 === 0) {
-                    this.boss.attacks.push({ x:this.boss.x, y:this.boss.y, vy:7, vx:(Math.random()-0.5)*10 });
+                if(this.boss.timer % 20 === 0) {
+                    this.boss.attacks.push({ 
+                        x:this.boss.x, y:this.boss.y, 
+                        vx:Math.cos(this.boss.timer*0.1)*5, 
+                        vy:5, type:'spike' 
+                    });
                 }
 
                 this.boss.attacks.forEach((a, i) => {
-                    a.y += a.vy; a.x += a.vx;
+                    a.x += a.vx; a.y += a.vy;
                     if(Math.hypot(a.x - this.player.x, a.y - this.player.y) < 30) {
-                        this.player.hp -= 5;
+                        this.player.hp -= 4;
                         this.boss.attacks.splice(i, 1);
                     }
+                    if(a.y > this.cvs.height) this.boss.attacks.splice(i, 1);
                 });
 
-                document.getElementById('p-hp').style.width = this.player.hp + "%";
-                document.getElementById('b-hp').style.width = (this.boss.hp/10) + "%";
+                document.getElementById('hp-p').style.width = this.player.hp + "%";
+                document.getElementById('hp-b').style.width = (this.boss.hp/10) + "%";
             },
 
             draw() {
                 const ctx = this.ctx;
-                ctx.fillStyle = "#000";
+                ctx.fillStyle = "#020205";
                 ctx.fillRect(0,0,this.cvs.width, this.cvs.height);
                 this.drawGrid();
 
-                // Player Model (Complex Drone)
+                // Player Model (Geometric Drone)
                 ctx.strokeStyle = var(--cyan);
                 ctx.lineWidth = 2;
                 ctx.strokeRect(this.player.x-20, this.player.y-10, 40, 20);
-                ctx.strokeRect(this.player.x-5, this.player.y-25, 10, 50);
+                ctx.beginPath(); ctx.arc(this.player.x, this.player.y, 10, 0, Math.PI*2); ctx.stroke();
 
-                // Boss Model (Synthetos Awakening)
+                // Boss Model (Synthetos Core)
                 ctx.fillStyle = var(--pink);
                 ctx.beginPath();
-                ctx.arc(this.boss.x, this.boss.y, 40 + Math.sin(this.boss.timer*0.1)*10, 0, Math.PI*2);
+                const sz = 50 + Math.sin(this.boss.timer*0.1)*10;
+                ctx.arc(this.boss.x, this.boss.y, sz, 0, Math.PI*2);
                 ctx.fill();
 
-                // Attacks
+                // Complex Attacks (Shards)
                 ctx.fillStyle = var(--yellow);
                 this.boss.attacks.forEach(a => {
                     ctx.beginPath();
-                    ctx.moveTo(a.x, a.y);
-                    ctx.lineTo(a.x-10, a.y+15);
-                    ctx.lineTo(a.x+10, a.y+15);
+                    ctx.moveTo(a.x, a.y-15);
+                    ctx.lineTo(a.x-5, a.y);
+                    ctx.lineTo(a.x, a.y+15);
+                    ctx.lineTo(a.x+5, a.y);
                     ctx.fill();
                 });
             }
