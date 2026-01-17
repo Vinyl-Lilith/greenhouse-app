@@ -1,13 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BioDome OS v5.0 | Secure Command & Control</title>
+    <title>BIODOME OS v5.0 | Pro-Integrity Command</title>
     
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -18,6 +17,7 @@
             --dark-bg: #010103;
             --panel: rgba(10, 10, 18, 0.98);
             --glow: 0 0 15px rgba(0, 243, 255, 0.3);
+            --border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         /* --- CORE FRAMEWORK --- */
@@ -32,170 +32,172 @@
             height: 70px; display: flex; justify-content: space-between; align-items: center;
             padding: 0 25px; background: #000; border-bottom: 2px solid #111; z-index: 1000;
         }
-        .v-label { font-family: 'Orbitron'; font-weight: 900; color: var(--cyan); letter-spacing: 3px; }
+        .v-label { font-family: 'Orbitron'; font-weight: 900; color: var(--cyan); letter-spacing: 3px; font-size: 1.2rem; }
         .conn-chip { display: flex; align-items: center; gap: 10px; font-size: 0.7rem; font-weight: 700; color: #444; }
         .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--pink); transition: 0.3s; }
         .dot.online { background: var(--green); box-shadow: 0 0 10px var(--green); }
 
         /* --- PAGE NAVIGATION --- */
-        #viewport { flex: 1; position: relative; overflow-y: auto; padding-bottom: 100px; }
-        .page { display: none; padding: 25px; max-width: 1000px; margin: 0 auto; animation: pageIn 0.5s ease; }
+        #viewport { flex: 1; position: relative; overflow-y: auto; padding-bottom: 110px; scroll-behavior: smooth; }
+        .page { display: none; padding: 25px; max-width: 1100px; margin: 0 auto; animation: pageIn 0.5s ease; }
         .page.active { display: block; }
-        @keyframes pageIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        @keyframes pageIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
         /* --- UI CARDS & TOOLTIPS --- */
         .card {
-            background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 15px; padding: 25px; margin-bottom: 25px; position: relative;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+            background: var(--panel); border: var(--border); border-radius: 15px; padding: 25px; margin-bottom: 25px; 
+            position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.9); overflow: hidden;
         }
-        .card h2 { margin: 0 0 20px 0; font-family: 'Orbitron'; font-size: 0.85rem; color: #888; letter-spacing: 2px; text-transform: uppercase; }
+        .card::before { content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--cyan); opacity: 0.5; }
+        .card h2 { margin: 0 0 20px 0; font-family: 'Orbitron'; font-size: 0.85rem; color: #888; letter-spacing: 2px; text-transform: uppercase; border-bottom: 1px solid #151515; padding-bottom: 12px; }
         
-        .help-btn {
-            position: absolute; top: 20px; right: 20px; width: 26px; height: 26px;
-            border: 1px solid #333; border-radius: 50%; text-align: center; line-height: 24px;
-            font-size: 0.75rem; color: #666; cursor: pointer; transition: 0.3s;
-        }
-        .help-btn:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: var(--glow); }
-
         /* --- CAMERA SYSTEM (V5: ROTATED + FULLSCREEN) --- */
         .cam-frame {
-            width: 100%; height: 280px; background: #000; border-radius: 10px;
+            width: 100%; height: 320px; background: #000; border-radius: 12px;
             overflow: hidden; position: relative; cursor: zoom-in; border: 1px solid #111;
             transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .cam-frame.fs { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; border-radius: 0; }
-        .cam-img { width: 100%; height: 100%; object-fit: cover; transform: rotate(180deg); }
-        .cam-ui { position: absolute; bottom: 15px; left: 15px; font-size: 0.6rem; color: rgba(255,255,255,0.4); pointer-events: none; }
+        .cam-img { width: 100%; height: 100%; object-fit: cover; transform: rotate(180deg); transition: 0.5s; }
+        .cam-overlay { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 4px; border-left: 3px solid var(--cyan); font-size: 0.65rem; color: #fff; pointer-events: none; }
 
-        /* --- TELEMETRY READOUTS --- */
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .stat-card { background: rgba(255,255,255,0.02); padding: 20px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.03); }
-        .s-val { display: block; font-family: 'Orbitron'; font-size: 2rem; color: #fff; margin-bottom: 5px; }
-        .s-lbl { font-size: 0.65rem; color: var(--cyan); letter-spacing: 1.5px; text-transform: uppercase; }
+        /* --- SENSOR TELEMETRY READOUTS --- */
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .stat-card { background: rgba(255,255,255,0.02); padding: 25px; border-radius: 12px; text-align: center; border: var(--border); transition: 0.3s; }
+        .stat-card:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); }
+        .s-val { display: block; font-family: 'Orbitron'; font-size: 2.2rem; color: #fff; margin-bottom: 8px; font-weight: 700; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        .s-lbl { font-size: 0.7rem; color: var(--cyan); letter-spacing: 2px; text-transform: uppercase; font-weight: 600; }
 
-        /* --- MANUAL OVERRIDE (PIN OBFUSCATION) --- */
-        .ctrl-group { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 18px; border-radius: 8px; margin-bottom: 12px; }
+        /* --- MANUAL OVERRIDE (RELAY MAPPING) --- */
+        .ctrl-group { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 10px; margin-bottom: 15px; border: 1px solid transparent; transition: 0.3s; }
+        .ctrl-group:hover { border-color: rgba(0, 243, 255, 0.2); }
         .toggle {
-            padding: 12px 30px; font-family: 'Orbitron'; font-size: 0.8rem; background: #111;
-            border: 1px solid #333; color: #444; border-radius: 4px; cursor: pointer; transition: 0.3s;
+            padding: 14px 35px; font-family: 'Orbitron'; font-size: 0.8rem; background: #111;
+            border: 1px solid #333; color: #555; border-radius: 5px; cursor: pointer; transition: 0.3s; font-weight: 900;
         }
         .toggle.on { background: var(--cyan); color: #000; border-color: var(--cyan); box-shadow: var(--glow); }
-        .mode-btn { width: 100%; margin-bottom: 25px; border-color: var(--pink); color: var(--pink); font-size: 1rem; }
-        .mode-btn.manual { background: var(--pink); color: #fff; }
+        .mode-btn { width: 100%; margin-bottom: 30px; border-color: var(--pink); color: var(--pink); font-size: 1.1rem; padding: 20px; }
+        .mode-btn.manual { background: var(--pink); color: #fff; box-shadow: 0 0 25px rgba(255, 0, 85, 0.3); }
 
-        /* --- CONFIG & BIOS SHIELD --- */
-        .field { margin-bottom: 20px; }
-        .field label { display: block; font-size: 0.7rem; color: #666; margin-bottom: 10px; letter-spacing: 1px; }
-        .field input {
-            width: 100%; background: #000; border: 1px solid #222; color: #fff;
-            padding: 15px; border-radius: 6px; font-family: 'Orbitron'; transition: 0.3s;
-        }
-        .field input:focus { border-color: var(--cyan); }
-        .save-btn { width: 100%; padding: 20px; background: var(--green); color: #000; font-family: 'Orbitron'; font-weight: 900; border: none; border-radius: 6px; cursor: pointer; }
-
-        /* --- DOCK NAVIGATION --- */
-        .dock {
-            position: fixed; bottom: 0; width: 100%; height: 85px; background: #050508;
-            border-top: 1px solid #111; display: flex; justify-content: space-around; align-items: center; z-index: 1000;
-        }
-        .dock-btn { color: #333; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; flex: 1; }
-        .dock-btn.active { color: var(--cyan); }
-        .dock-btn i { font-size: 1.4rem; margin-bottom: 5px; }
-        .dock-btn span { font-size: 0.6rem; font-weight: 800; }
+        /* --- ANALYTICS CANVAS --- */
+        .chart-container { height: 200px; width: 100%; margin-top: 20px; }
 
         /* --- PRO GAME LAYER (SYNTHETOS V5) --- */
         #game-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; display: none; }
-        #canvas { width: 100%; height: 100%; display: block; }
-        .game-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 30px; }
+        #canvas { width: 100%; height: 100%; display: block; cursor: none; }
+        .game-hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 40px; }
+        
+        .bar-wrap { width: 280px; height: 14px; background: rgba(0,0,0,0.6); border: 1px solid #333; position: relative; }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         
         .pause-btn {
-            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
-            width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--cyan);
+            position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+            width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--cyan);
             color: var(--cyan); background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
-            font-family: 'Orbitron'; pointer-events: auto; cursor: pointer;
+            font-family: 'Orbitron'; font-size: 1.5rem; pointer-events: auto; cursor: pointer; backdrop-filter: blur(5px);
         }
-        
-        /* SYNTHETOS AWAKENING INTRO */
-        #boss-intro {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95);
-            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 6000;
-            text-align: center; border: 4px solid var(--pink);
-        }
-        .warning-text { font-family: 'Orbitron'; font-size: 4rem; color: var(--pink); animation: glitch 0.2s infinite; }
-        @keyframes glitch { 0% { transform: translate(0); } 20% { transform: translate(-5px, 5px); } 40% { transform: translate(-5px, -5px); } 60% { transform: translate(5px, 5px); } 80% { transform: translate(5px, -5px); } 100% { transform: translate(0); } }
 
-        /* HUD BARS */
-        .bar-wrap { width: 250px; height: 12px; background: rgba(255,255,255,0.05); border: 1px solid #333; }
-        .bar-fill { height: 100%; transition: width 0.3s; }
+        /* --- DOCK NAVIGATION --- */
+        .dock {
+            position: fixed; bottom: 0; width: 100%; height: 95px; background: #050508;
+            border-top: 1px solid #111; display: flex; justify-content: space-around; align-items: center; z-index: 1000;
+        }
+        .dock-btn { color: #444; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; flex: 1; }
+        .dock-btn.active { color: var(--cyan); }
+        .dock-btn i { font-size: 1.6rem; margin-bottom: 6px; }
+        .dock-btn span { font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; }
+
+        /* --- SYSTEM MODALS --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.96); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center; z-index: 6000;
+        }
+        .modal-btn { width: 300px; padding: 22px; margin-top: 20px; font-family: 'Orbitron'; font-weight: 900; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div class="v-label">BIODOME OS v5.0</div>
+    <header class="header">
+        <div class="v-label">BIODOME OS v5.0 // PRO-INTEGRITY</div>
         <div class="conn-chip">
-            <span id="conn-lbl">UPLINK DISCONNECTED</span>
+            <span id="conn-lbl">ESTABLISHING SECURE UPLINK...</span>
             <div id="conn-dot" class="dot"></div>
         </div>
-    </div>
+    </header>
 
     <div id="viewport">
         <div id="p-home" class="page active">
             <div class="card">
-                <div class="help-btn" onclick="ui.help('home')">?</div>
-                <h2>SURVEILLANCE FEED (FIXED)</h2>
+                <h2>LIVE FEED // BIOS-SECURE</h2>
                 <div class="cam-frame" id="cam-box" ondblclick="ui.toggleFS()">
-                    <img id="stream" class="cam-img" src="" alt="WAITING FOR UPLINK...">
-                    <div class="cam-ui">CHANNEL 01 // BIOS-SECURE // 180 DEG CORRECTION</div>
+                    <img id="stream" class="cam-img" src="" alt="WAITING FOR ARDUINO SERIAL DATA...">
+                    <div class="cam-overlay">STREAM_01: 180° OPTICAL CORRECTION // 30FPS</div>
                 </div>
             </div>
 
             <div class="grid">
-                <div class="stat-card"><span class="s-val" id="v-temp">--°</span><span class="s-lbl">Air Temp</span></div>
-                <div class="stat-card"><span class="s-val" id="v-hum">--%</span><span class="s-lbl">Humidity</span></div>
+                <div class="stat-card"><span class="s-val" id="v-temp">--°C</span><span class="s-lbl">Ambient Temperature</span></div>
+                <div class="stat-card"><span class="s-val" id="v-hum">--%</span><span class="s-lbl">Relative Humidity</span></div>
+                <div class="stat-card"><span class="s-val" id="v-soil1">--%</span><span class="s-lbl">Soil Moisture (S1)</span></div>
+                <div class="stat-card"><span class="s-val" id="v-soil2">--%</span><span class="s-lbl">Soil Moisture (S2)</span></div>
                 <div class="stat-card" style="grid-column: span 2;">
-                    <span class="s-val" id="v-soil">--%</span><span class="s-lbl">Avg Soil Moisture</span>
-                </div>
-                <div class="stat-card" style="grid-column: span 2;">
-                    <div id="v-npk" style="font-family:'Orbitron'; font-size: 1.4rem; color:#fff;">-- | -- | --</div>
-                    <span class="s-lbl">Current N-P-K Concentration</span>
+                    <div id="v-npk" style="font-family:'Orbitron'; font-size: 2rem; color:#fff; font-weight: 900;">-- | -- | --</div>
+                    <span class="s-lbl">NPK CONCENTRATION (N | P | K)</span>
                 </div>
             </div>
         </div>
 
         <div id="p-manual" class="page">
             <div class="card">
-                <div class="help-btn" onclick="ui.help('manual')">?</div>
-                <h2>HARDWARE OVERRIDE</h2>
-                <button id="mode-sel" class="toggle mode-btn" onclick="iot.mode()">SYSTEM MODE: AUTO</button>
+                <h2>HARDWARE CHAIN OF COMMAND</h2>
+                <button id="mode-sel" class="toggle mode-btn" onclick="iot.mode()">BIOS MODE: AUTOMATED</button>
                 
-                <div id="m-grid" style="opacity: 0.3; pointer-events: none; transition: 0.4s;">
-                    <div class="ctrl-group"><span>Exhaust System</span><button class="toggle" id="b-exhaust" onclick="iot.relay('exhaust')">OFF</button></div>
-                    <div class="ctrl-group"><span>Peltier Array</span><button class="toggle" id="b-peltier" onclick="iot.relay('peltier')">OFF</button></div>
-                    <div class="ctrl-group"><span>Irrigation Pump</span><button class="toggle" id="b-pump_w" onclick="iot.relay('pump_w')">OFF</button></div>
-                    <div class="ctrl-group"><span>Nutrient Injector</span><button class="toggle" id="b-pump_n" onclick="iot.relay('pump_n')">OFF</button></div>
+                <div id="m-grid" style="opacity: 0.3; pointer-events: none; transition: 0.5s;">
+                    <div class="ctrl-group">
+                        <div>
+                            <div style="font-weight:700; color:#fff;">Exhaust System</div>
+                            <div style="font-size:0.6rem; color:#555;">RELAY_PIN_22</div>
+                        </div>
+                        <button class="toggle" id="b-exhaust" onclick="iot.relay('exhaust')">OFF</button>
+                    </div>
+                    <div class="ctrl-group">
+                        <div>
+                            <div style="font-weight:700; color:#fff;">Peltier Array</div>
+                            <div style="font-size:0.6rem; color:#555;">RELAY_PIN_23</div>
+                        </div>
+                        <button class="toggle" id="b-peltier" onclick="iot.relay('peltier')">OFF</button>
+                    </div>
+                    <div class="ctrl-group">
+                        <div>
+                            <div style="font-weight:700; color:#fff;">Water Irrigation</div>
+                            <div style="font-size:0.6rem; color:#555;">RELAY_PIN_24</div>
+                        </div>
+                        <button class="toggle" id="b-pump_w" onclick="iot.relay('pump_w')">OFF</button>
+                    </div>
+                    <div class="ctrl-group">
+                        <div>
+                            <div style="font-weight:700; color:#fff;">Nutrient Injector</div>
+                            <div style="font-size:0.6rem; color:#555;">RELAY_PIN_25</div>
+                        </div>
+                        <button class="toggle" id="b-pump_n" onclick="iot.relay('pump_n')">OFF</button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div id="p-config" class="page">
             <div class="card">
-                <div class="help-btn" onclick="ui.help('config')">?</div>
                 <h2>BIOLOGICAL LOGIC TARGETS</h2>
-                <div class="field">
-                    <label>TARGET TEMPERATURE (°C)</label>
-                    <input type="number" id="t-temp" value="25.0">
+                <div style="margin-bottom:30px;">
+                    <label style="font-size:0.7rem; color:#666; display:block; margin-bottom:10px;">TARGET TEMPERATURE (°C)</label>
+                    <input type="number" id="t-temp" value="25.0" step="0.1" style="width:100%; background:#000; border:1px solid #222; color:#fff; padding:20px; font-family:'Orbitron';">
                 </div>
-                <div class="field">
-                    <label>MIN SOIL MOISTURE (%)</label>
-                    <input type="number" id="t-soil" value="45">
+                <div style="margin-bottom:30px;">
+                    <label style="font-size:0.7rem; color:#666; display:block; margin-bottom:10px;">MIN SOIL MOISTURE (%)</label>
+                    <input type="number" id="t-soil" value="45" style="width:100%; background:#000; border:1px solid #222; color:#fff; padding:20px; font-family:'Orbitron';">
                 </div>
-                <div class="field">
-                    <label>NPK THRESHOLD TARGET</label>
-                    <input type="number" id="t-npk" value="180">
-                </div>
-                <button class="save-btn" onclick="iot.saveConfig()">SYNC TO BIODOME</button>
+                <button class="modal-btn" style="background:var(--green); color:#000; width:100%;" onclick="iot.saveConfig()">SYNC TO BIODOME CORE</button>
             </div>
         </div>
     </div>
@@ -209,36 +211,30 @@
 
     <div id="game-layer">
         <canvas id="canvas"></canvas>
-        <div class="game-ui">
+        <div class="game-hud">
             <div class="pause-btn" id="p-btn" onclick="game.pause()">II</div>
             
-            <div style="position:absolute; bottom:30px; left:30px;">
-                <div style="font-family:'Orbitron'; font-size:0.7rem; color:var(--cyan); margin-bottom:5px;">DRONE INTEGRITY</div>
-                <div class="bar-wrap"><div id="hp-p" class="bar-fill" style="background:var(--cyan); width:100%;"></div></div>
+            <div style="position:absolute; bottom:40px; left:40px;">
+                <div style="font-family:'Orbitron'; font-size:0.75rem; color:var(--cyan); margin-bottom:8px;">DRONE INTEGRITY</div>
+                <div class="bar-wrap"><div id="hp-p" class="bar-fill" style="background:var(--cyan);"></div></div>
             </div>
             
-            <div style="position:absolute; bottom:30px; right:30px; text-align:right;">
-                <div style="font-family:'Orbitron'; font-size:0.7rem; color:var(--pink); margin-bottom:5px;">SYNTHETOS CORE</div>
-                <div class="bar-wrap"><div id="hp-b" class="bar-fill" style="background:var(--pink); width:100%;"></div></div>
+            <div style="position:absolute; bottom:40px; right:40px; text-align:right;">
+                <div style="font-family:'Orbitron'; font-size:0.75rem; color:var(--pink); margin-bottom:8px;">SYNTHETOS CORE</div>
+                <div class="bar-wrap"><div id="hp-b" class="bar-fill" style="background:var(--pink);"></div></div>
             </div>
         </div>
 
-        <div id="boss-intro">
-            <div class="warning-text">THREAT DETECTED</div>
-            <h1 style="font-family:'Orbitron'; color:white; font-size: 3rem; letter-spacing:10px;">SYNTHETOS</h1>
-            <p style="color:#666; letter-spacing:5px;">AWAKENING IN SECTOR 7</p>
-        </div>
-
-        <div id="game-menu" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-            <h1 style="font-family:'Orbitron'; font-size:4rem; color:var(--cyan);">DRONE PILOT</h1>
-            <p style="color:#888; max-width:400px; margin-bottom:30px;">Sanitize the biological mutations. Protect the BioDome at all costs.</p>
-            <button class="save-btn" style="width:250px;" onclick="game.launch()">LAUNCH DRONE</button>
-            <button class="save-btn" style="width:250px; margin-top:15px; background:#222; color:#555;" onclick="game.exit()">EXIT</button>
+        <div id="game-menu" class="modal">
+            <h1 style="font-family:'Orbitron'; font-size:4rem; color:var(--pink); margin:0;">SYNTHETOS</h1>
+            <p style="color:#555; letter-spacing:10px; margin-bottom:40px;">BIO-THREAT AWAKENING</p>
+            <button class="modal-btn" style="background:var(--cyan); color:#000;" onclick="game.launch()">ENGAGE THREAT</button>
+            <button class="modal-btn" style="background:#111; color:#444;" onclick="game.exit()">EXIT</button>
         </div>
     </div>
 
     <script>
-        // --- IOT ENGINE (MATCHES ARDUINO SKETCH) ---
+        /* --- IOT ENGINE (CONNECTED TO sketch_dec26b.ino) --- */
         const iot = {
             socket: null,
             isManual: false,
@@ -250,20 +246,25 @@
                     document.getElementById('conn-lbl').innerText = "SECURE UPLINK ACTIVE";
                     document.getElementById('conn-dot').classList.add('online');
                 });
+                
                 this.socket.on('data', d => {
-                    if(d.temp) document.getElementById('v-temp').innerText = d.temp.toFixed(1) + "°";
+                    if(d.temp) document.getElementById('v-temp').innerText = d.temp.toFixed(1) + "°C";
                     if(d.hum) document.getElementById('v-hum').innerText = d.hum.toFixed(1) + "%";
-                    if(d.soil1) document.getElementById('v-soil').innerText = d.soil1 + "%";
-                    if(d.n) document.getElementById('v-npk').innerText = `${d.n} | ${d.p} | ${d.k}`;
+                    if(d.soil1) document.getElementById('v-soil1').innerText = d.soil1 + "%";
+                    if(d.soil2) document.getElementById('v-soil2').innerText = d.soil2 + "%";
+                    if(d.n !== undefined) document.getElementById('v-npk').innerText = `${d.n} | ${d.p} | ${d.k}`;
                 });
-                this.socket.on('frame', f => { document.getElementById('stream').src = "data:image/jpeg;base64," + f; });
+
+                this.socket.on('frame', f => { 
+                    document.getElementById('stream').src = "data:image/jpeg;base64," + f; 
+                });
             },
 
             mode() {
                 this.isManual = !this.isManual;
                 const btn = document.getElementById('mode-sel');
                 const grid = document.getElementById('m-grid');
-                btn.innerText = this.isManual ? "SYSTEM MODE: MANUAL" : "SYSTEM MODE: AUTO";
+                btn.innerText = this.isManual ? "BIOS MODE: MANUAL OVERRIDE" : "BIOS MODE: AUTOMATED";
                 btn.classList.toggle('manual', this.isManual);
                 grid.style.opacity = this.isManual ? "1" : "0.3";
                 grid.style.pointerEvents = this.isManual ? "auto" : "none";
@@ -281,24 +282,13 @@
             saveConfig() {
                 let t = parseFloat(document.getElementById('t-temp').value);
                 let s = parseFloat(document.getElementById('t-soil').value);
-                let n = parseFloat(document.getElementById('t-npk').value);
-
-                // HUMAN-ERROR SHIELD (BIOS SANITIZATION)
-                let warn = false;
-                if(t > 45) { t = 45; warn = true; }
-                if(t < 8) { t = 8; warn = true; }
-                if(s > 100) { s = 100; warn = true; }
-
-                if(warn) {
-                    alert("BIOS SHIELD: Values adjusted to within biological safety limits.");
-                    document.getElementById('t-temp').value = t;
-                    document.getElementById('t-soil').value = s;
-                }
-                this.socket.emit('command', { targetTemp: t, targetSoil: s, targetNPK: n });
+                // Human-Error Shield
+                if(t > 45 || t < 5) { alert("ERROR: Temperature outside biological safety zone."); return; }
+                this.socket.emit('command', { targetTemp: t, targetSoil: s });
             }
         };
 
-        // --- UI UTILS ---
+        /* --- UI UTILITIES --- */
         const ui = {
             tab(id, el) {
                 document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -306,26 +296,18 @@
                 document.getElementById('p-' + id).classList.add('active');
                 el.classList.add('active');
             },
-            help(page) {
-                const msgs = {
-                    home: "LIVE FEED: Double-tap to expand. Telemetry is updated every 2s from the Arduino core.",
-                    manual: "MANUAL OVERRIDE: Warning - Direct relay control (Pins 22-25) suspends automated biological logic.",
-                    config: "TARGETS: Set ideal parameters. The system will activate pumps/fans to meet these goals."
-                };
-                alert(msgs[page]);
-            },
             toggleFS() { document.getElementById('cam-box').classList.toggle('fs'); }
         };
 
-        // --- SYNTHETOS V5.0 PRO ENGINE ---
+        /* --- SYNTHETOS V5.0 GAME ENGINE --- */
         const game = {
             cvs: document.getElementById('canvas'),
             ctx: document.getElementById('canvas').getContext('2d'),
             active: false, paused: false,
             width: 0, height: 0,
             
-            player: { x:0, y:0, hp:100, bullets:[], speed:7 },
-            boss: { x:0, y:0, hp:1000, timer:0, phase:0, projs:[] },
+            player: { x:0, y:0, r:20, hp:100, bullets:[], speed:8 },
+            boss: { x:0, y:0, r:80, hp:1000, timer:0, phase:0, projs:[] },
             keys: {},
 
             open() {
@@ -345,11 +327,8 @@
 
             launch() {
                 document.getElementById('game-menu').style.display = 'none';
-                document.getElementById('boss-intro').style.display = 'flex';
-                setTimeout(() => { document.getElementById('boss-intro').style.display = 'none'; }, 3000);
-                
-                this.player = { x: this.width/2, y: this.height-100, hp:100, bullets:[], speed:7 };
-                this.boss = { x: this.width/2, y: 180, hp:1000, timer:0, phase:0, projs:[] };
+                this.player = { x: this.width/2, y: this.height-120, r:20, hp:100, bullets:[], speed:8 };
+                this.boss = { x: this.width/2, y: 180, r:80, hp:1000, timer:0, phase:0, projs:[] };
                 this.paused = false;
             },
 
@@ -364,13 +343,14 @@
             },
 
             drawGrid() {
-                // ANTI-DIZZY STATIC ANCHOR GRID
+                // ANTI-DIZZY ENGINE: STATIC ANCHOR GRID
                 this.ctx.strokeStyle = "rgba(0, 243, 255, 0.04)";
                 this.ctx.lineWidth = 1;
-                for(let x=0; x<this.width; x+=60) {
+                const step = 60;
+                for(let x=0; x<this.width; x+=step) {
                     this.ctx.beginPath(); this.ctx.moveTo(x,0); this.ctx.lineTo(x,this.height); this.ctx.stroke();
                 }
-                for(let y=0; y<this.height; y+=60) {
+                for(let y=0; y<this.height; y+=step) {
                     this.ctx.beginPath(); this.ctx.moveTo(0,y); this.ctx.lineTo(this.width,y); this.ctx.stroke();
                 }
             },
@@ -388,55 +368,42 @@
                 const p = this.player;
                 const b = this.boss;
 
-                // Normalized Movement (Anti-Diagonal Speed Fix)
-                let vx = 0, vy = 0;
-                if(this.keys['w']) vy = -1;
-                if(this.keys['s']) vy = 1;
-                if(this.keys['a']) vx = -1;
-                if(this.keys['d']) vx = 1;
-
-                const mag = Math.hypot(vx, vy);
-                if(mag > 0) {
-                    p.x += (vx/mag) * p.speed;
-                    p.y += (vy/mag) * p.speed;
-                }
-
-                // Edge Clamp (No sticking)
-                p.x = Math.max(20, Math.min(this.width-20, p.x));
-                p.y = Math.max(20, Math.min(this.height-20, p.y));
+                // Player Move
+                if(this.keys['w']) p.y -= p.speed;
+                if(this.keys['s']) p.y += p.speed;
+                if(this.keys['a']) p.x -= p.speed;
+                if(this.keys['d']) p.x += p.speed;
 
                 // Shooting
-                if(this.keys[' '] && p.bullets.length < 8) {
-                    p.bullets.push({x:p.x, y:p.y-20, vy:-15});
-                    this.keys[' '] = false; // Semi-auto
+                if(this.keys[' '] && p.bullets.length < 15) {
+                    p.bullets.push({x:p.x, y:p.y-30, vy:-18});
+                    this.keys[' '] = false;
                 }
 
                 p.bullets.forEach((bull, i) => {
                     bull.y += bull.vy;
-                    if(Math.hypot(bull.x - b.x, bull.y - b.y) < 60) {
-                        b.hp -= 8;
-                        p.bullets.splice(i, 1);
+                    if(Math.hypot(bull.x - b.x, bull.y - b.y) < b.r) {
+                        b.hp -= 12; p.bullets.splice(i, 1);
                     }
                     if(bull.y < 0) p.bullets.splice(i, 1);
                 });
 
                 // BOSS 7-PHASE LOGIC
                 b.timer++;
-                if(b.timer % 200 === 0) b.phase = Math.floor(Math.random() * 7);
+                if(b.timer % 300 === 0) b.phase = (b.phase + 1) % 7;
 
-                if(b.timer % 15 === 0) {
+                if(b.timer % 10 === 0) {
                     switch(b.phase) {
-                        case 0: b.projs.push({x:b.x, y:b.y, vx:Math.cos(b.timer)*6, vy:Math.sin(b.timer)*6, c:var(--pink)}); break;
-                        case 1: b.projs.push({x:this.player.x, y:0, vx:0, vy:15, c:var(--yellow)}); break;
-                        case 2: b.projs.push({x:b.x, y:b.y, vx:(Math.random()-0.5)*10, vy:8, c:var(--green)}); break;
+                        case 0: b.projs.push({x:b.x, y:b.y, vx:Math.cos(b.timer)*7, vy:Math.sin(b.timer)*7, c:var(--pink)}); break;
+                        case 1: b.projs.push({x:this.player.x, y:0, vx:0, vy:20, c:var(--yellow)}); break;
+                        case 3: b.projs.push({x:Math.random()*this.width, y:0, vx:0, vy:10, c:var(--green)}); break;
                     }
                 }
 
                 b.projs.forEach((pr, i) => {
                     pr.x += pr.vx; pr.y += pr.vy;
-                    if(Math.hypot(pr.x - p.x, pr.y - p.y) < 30) {
-                        p.hp -= 4;
-                        b.projs.splice(i, 1);
+                    if(Math.hypot(pr.x - p.x, pr.y - p.y) < 25) {
+                        p.hp -= 5; b.projs.splice(i, 1);
                     }
                     if(pr.y > this.height) b.projs.splice(i, 1);
                 });
@@ -451,28 +418,22 @@
                 ctx.fillRect(0,0,this.width, this.height);
                 this.drawGrid();
 
-                // Player (Drone)
+                // Player
                 ctx.strokeStyle = var(--cyan);
-                ctx.lineWidth = 3;
-                ctx.strokeRect(this.player.x-20, this.player.y-10, 40, 20);
-                ctx.beginPath(); ctx.arc(this.player.x, this.player.y, 10, 0, Math.PI*2); ctx.stroke();
+                ctx.lineWidth = 4;
+                ctx.strokeRect(this.player.x-20, this.player.y-20, 40, 40);
 
-                // Boss (Synthetos)
+                // Boss
                 ctx.fillStyle = var(--pink);
                 ctx.beginPath();
-                const sz = 60 + Math.sin(this.boss.timer*0.1)*10;
-                ctx.arc(this.boss.x, this.boss.y, sz, 0, Math.PI*2);
+                ctx.arc(this.boss.x, this.boss.y, this.boss.r + Math.sin(this.boss.timer*0.1)*5, 0, Math.PI*2);
                 ctx.fill();
 
-                // Boss Attacks
+                // Projs
                 this.boss.projs.forEach(pr => {
                     ctx.fillStyle = pr.c;
-                    ctx.beginPath(); ctx.arc(pr.x, pr.y, 10, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(pr.x, pr.y, 8, 0, Math.PI*2); ctx.fill();
                 });
-
-                // Bullets
-                ctx.fillStyle = var(--yellow);
-                this.player.bullets.forEach(bull => ctx.fillRect(bull.x-2, bull.y, 4, 15));
             }
         };
 
