@@ -3,21 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BioDome OS v2.0 | Synthetos</title>
+    <title>BioDome OS v3.0 | Synthetos</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
+        /* --- CORE VARIABLES & RESET --- */
         :root {
-            --primary: #00f3ff;    /* Cyan */
-            --accent: #ff0055;     /* Cyber Pink */
-            --bio: #39ff14;        /* Bio Green */
-            --bg-dark: #050510;
-            --glass: rgba(20, 20, 30, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --cyan: #00f3ff;
+            --pink: #ff0055;
+            --green: #39ff14;
+            --dark: #050510;
+            --panel: rgba(20, 20, 30, 0.85);
+            --border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
 
         body {
             font-family: 'Rajdhani', sans-serif;
@@ -30,690 +31,749 @@
             flex-direction: column;
         }
 
-        /* --- UI LAYER --- */
-        #app-container {
+        /* --- UI COMPONENTS --- */
+        /* Status Bar */
+        .status-bar {
+            height: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            background: rgba(0,0,0,0.8);
+            border-bottom: 1px solid #333;
+            z-index: 50;
+        }
+        .brand { font-family: 'Orbitron'; letter-spacing: 2px; color: var(--cyan); }
+        .status-ind { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; }
+        .dot { width: 8px; height: 8px; background: #555; border-radius: 50%; box-shadow: 0 0 5px #555; transition: 0.3s; }
+        .dot.online { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+        /* Main App Area */
+        #app-viewport {
             flex: 1;
             position: relative;
             overflow-y: auto;
-            padding-bottom: 80px; /* Space for nav */
+            padding-bottom: 80px; /* Nav spacing */
         }
-
-        /* Status Bar */
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            padding: 15px;
-            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
-            z-index: 10;
-        }
-        .status-dot {
-            height: 10px; width: 10px;
-            background-color: var(--accent);
-            border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 10px var(--accent);
-            transition: background 0.3s;
-        }
-        .status-dot.connected { background-color: var(--bio); box-shadow: 0 0 10px var(--bio); }
 
         /* Pages */
-        .page {
-            display: none;
-            padding: 20px;
-            animation: fadeIn 0.3s ease-in;
-        }
+        .page { display: none; padding: 20px; max-width: 800px; margin: 0 auto; animation: slideUp 0.3s ease; }
         .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Titles */
-        h2 {
-            font-family: 'Orbitron', sans-serif;
-            border-bottom: 2px solid var(--primary);
-            padding-bottom: 5px;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--primary);
-        }
-
-        /* CARDS (Glassmorphism) */
+        /* Cards & Grids */
         .card {
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
+            background: var(--panel);
+            backdrop-filter: blur(8px);
+            border: var(--border);
             border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-
-        /* DASHBOARD GRID */
-        .sensor-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-        }
-        .sensor-item {
-            text-align: center;
-            background: rgba(255,255,255,0.05);
-            padding: 15px;
-            border-radius: 8px;
-        }
-        .sensor-value { font-size: 2rem; font-weight: bold; color: white; }
-        .sensor-label { font-size: 0.9rem; color: #aaa; text-transform: uppercase; }
-
-        /* CAMERA */
-        .cam-frame {
-            width: 100%;
-            height: 200px;
-            background: #000;
-            border-radius: 8px;
-            border: 2px solid #333;
-            overflow: hidden;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             position: relative;
         }
-        #camImg { width: 100%; height: 100%; object-fit: cover; }
-        .rec-tag { position: absolute; top: 10px; left: 10px; color: red; font-weight: bold; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
-
-        /* TOGGLES (Manual) */
-        .control-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 8px;
+        h2 { margin: 0 0 15px 0; color: var(--cyan); font-family: 'Orbitron'; font-size: 1.2rem; border-bottom: 1px solid #333; padding-bottom: 8px; }
+        
+        /* Help Icon */
+        .help-btn {
+            position: absolute; top: 15px; right: 15px;
+            width: 24px; height: 24px;
+            border: 1px solid #666; border-radius: 50%;
+            text-align: center; line-height: 22px;
+            color: #aaa; cursor: pointer; font-size: 0.9rem; font-family: 'Orbitron';
         }
+        .help-btn:hover { color: white; border-color: white; }
+
+        /* Dashboard Sensors */
+        .sensor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .sensor-box { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; text-align: center; }
+        .s-val { font-size: 1.8rem; font-weight: 700; color: #fff; display: block; }
+        .s-lbl { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Camera */
+        .cam-feed { width: 100%; height: 200px; background: #000; border: 1px solid #333; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;}
+        .cam-feed img { width: 100%; height: 100%; object-fit: cover; }
+        .rec-dot { position: absolute; top: 10px; left: 10px; color: red; font-size: 0.8rem; font-weight: bold; animation: blink 1s infinite; }
+
+        /* Manual Controls */
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; }
         .btn-toggle {
-            padding: 8px 20px;
-            background: #333;
-            border: 1px solid #555;
-            color: #888;
-            border-radius: 4px;
-            font-family: 'Orbitron';
-            cursor: pointer;
-            transition: all 0.2s;
+            background: #222; color: #666; border: 1px solid #444; padding: 8px 25px;
+            font-family: 'Orbitron'; cursor: pointer; border-radius: 4px; transition: 0.2s;
         }
-        .btn-toggle.active {
-            background: var(--primary);
-            color: #000;
-            box-shadow: 0 0 15px var(--primary);
-            border-color: var(--primary);
-        }
+        .btn-toggle.on { background: var(--cyan); color: #000; box-shadow: 0 0 15px var(--cyan); border-color: var(--cyan); }
+        .btn-toggle.mode-man { background: var(--pink); color: #fff; box-shadow: 0 0 15px var(--pink); border-color: var(--pink); }
 
-        /* INPUTS (Settings) */
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; margin-bottom: 5px; color: #ccc; }
-        .input-group input {
-            width: 100%;
-            padding: 10px;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid #444;
-            color: var(--primary);
-            font-family: 'Orbitron';
-            border-radius: 4px;
+        /* Config Inputs */
+        .input-row { margin-bottom: 15px; }
+        .input-row label { display: block; color: #aaa; margin-bottom: 5px; font-size: 0.9rem; }
+        .input-row input {
+            width: 100%; background: #111; border: 1px solid #444; color: var(--cyan); padding: 12px;
+            font-family: 'Orbitron'; border-radius: 4px;
         }
-        .btn-save {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(45deg, var(--bio), #228b22);
-            color: black;
-            font-weight: bold;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
+        .btn-full { width: 100%; padding: 15px; background: #228b22; color: white; border: none; font-weight: bold; font-family: 'Orbitron'; cursor: pointer; border-radius: 4px; }
 
-        /* NAVIGATION BAR */
+        /* Navigation */
         .nav-bar {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            height: 70px;
-            background: rgba(10, 10, 15, 0.95);
-            backdrop-filter: blur(10px);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            border-top: 1px solid #333;
-            z-index: 100;
+            position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
+            background: #0a0a0f; border-top: 1px solid #333;
+            display: flex; justify-content: space-around; align-items: center; z-index: 100;
         }
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: #666;
-            font-size: 0.8rem;
-            cursor: pointer;
-            width: 25%;
-        }
-        .nav-item span { font-size: 1.5rem; margin-bottom: 2px; }
-        .nav-item.active { color: var(--primary); }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; color: #555; cursor: pointer; flex: 1; }
+        .nav-btn span { font-size: 1.4rem; margin-bottom: 4px; }
+        .nav-btn div { font-size: 0.7rem; letter-spacing: 1px; }
+        .nav-btn.active { color: var(--cyan); text-shadow: 0 0 10px rgba(0,243,255,0.5); }
 
-        /* --- GAME LAYER --- */
-        #game-ui {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #000;
-            z-index: 200;
-            display: none; /* Hidden by default */
+        /* --- MODALS (Help) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 2000;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-box { background: #1a1a20; border: 1px solid #444; padding: 30px; border-radius: 8px; max-width: 90%; width: 400px; }
+        .modal-close { margin-top: 20px; background: #333; color: white; border: none; padding: 10px 20px; width: 100%; cursor: pointer; }
+
+        /* --- GAME UI LAYERS --- */
+        #game-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 5000; display: none;
         }
         canvas { display: block; width: 100%; height: 100%; }
-        
-        .hud { position: absolute; pointer-events: none; width: 100%; padding: 20px; top: 0; box-sizing: border-box; }
-        .bar-container { width: 100%; height: 20px; background: #333; margin-bottom: 5px; border: 1px solid #555; }
-        .bar-fill { height: 100%; width: 100%; transition: width 0.1s linear; }
-        #boss-hp { background: var(--accent); }
-        #player-hp { background: var(--bio); width: 100%; }
-        
-        /* Mobile Controls */
-        .controls-layer {
-            position: absolute;
-            bottom: 20px; left: 0; width: 100%;
-            height: 150px;
-            pointer-events: none; /* Let touches pass through to specific elements */
-            display: flex;
-            justify-content: space-between;
-            padding: 0 40px;
-        }
-        .touch-zone {
-            width: 120px; height: 120px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.2);
-            pointer-events: auto;
-            position: relative;
-        }
-        #stick {
-            width: 50px; height: 50px;
-            background: rgba(255,255,255,0.5);
-            border-radius: 50%;
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-        }
-        #btn-action {
-            width: 100px; height: 100px;
-            border-radius: 50%;
-            background: rgba(255, 0, 85, 0.3);
-            border: 2px solid var(--accent);
-            pointer-events: auto;
-            display: flex;
-            align-items: center; justify-content: center;
-            font-weight: bold;
-            font-family: 'Orbitron';
-        }
-        #btn-action:active { background: var(--accent); color: black; }
 
-        .game-over-screen {
+        /* Game Overlays */
+        .g-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
+        
+        /* HUD */
+        .hud-top { padding: 20px; display: flex; justify-content: space-between; width: 100%; }
+        .hp-bar-box { width: 100%; height: 12px; background: #333; border: 1px solid #555; margin-top: 5px; }
+        .hp-fill { height: 100%; transition: width 0.1s; }
+        
+        /* Pause/Menu Buttons */
+        .game-btn-corner { pointer-events: auto; background: rgba(0,0,0,0.5); border: 1px solid #555; color: white; padding: 8px 15px; font-family: 'Orbitron'; cursor: pointer; }
+
+        /* Menus (Start, Pause, Game Over) */
+        .g-menu {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            z-index: 300;
-            display: none;
+            background: rgba(0,0,0,0.9); z-index: 10; pointer-events: auto;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
         }
-        .glitch-text { font-size: 3rem; color: var(--accent); font-family: 'Orbitron'; text-shadow: 2px 2px var(--primary); }
+        .g-title { font-size: 3rem; font-family: 'Orbitron'; color: var(--pink); margin-bottom: 20px; text-shadow: 2px 2px var(--cyan); }
+        .g-btn {
+            background: transparent; border: 2px solid var(--cyan); color: var(--cyan);
+            padding: 15px 40px; font-family: 'Orbitron'; font-size: 1.2rem; margin: 10px;
+            cursor: pointer; transition: 0.2s; width: 250px;
+        }
+        .g-btn:hover { background: var(--cyan); color: black; }
+        .g-btn.danger { border-color: var(--pink); color: var(--pink); }
+        .g-btn.danger:hover { background: var(--pink); color: black; }
+
+        /* DEVICE SPECIFIC CONTROLS */
+        .touch-controls {
+            position: absolute; bottom: 20px; width: 100%; height: 150px;
+            pointer-events: none; padding: 0 40px;
+            display: none; /* Hidden by default */
+            justify-content: space-between;
+        }
+        /* Only show touch controls on touch devices */
+        @media (pointer: coarse) {
+            .touch-controls { display: flex; }
+            .pc-hint { display: none !important; }
+        }
+        /* Only show PC hints on non-touch */
+        @media (pointer: fine) {
+            .touch-controls { display: none; }
+            .pc-hint { display: block; color: #888; margin-top: 20px; font-family: 'Orbitron'; }
+        }
+
+        .stick-zone { width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); pointer-events: auto; position: relative; }
+        .stick-nub { width: 50px; height: 50px; background: rgba(255,255,255,0.5); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        
+        .fire-btn {
+            width: 100px; height: 100px; border-radius: 50%; background: rgba(255, 0, 85, 0.2);
+            border: 2px solid var(--pink); color: var(--pink); display: flex; align-items: center; justify-content: center;
+            font-family: 'Orbitron'; font-weight: bold; pointer-events: auto;
+        }
+        .fire-btn:active { background: var(--pink); color: white; }
+
+        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
 
     <div class="status-bar">
-        <div style="font-weight: bold; font-family: 'Orbitron'; letter-spacing: 2px;">BIODOME OS</div>
-        <div>
-            <span id="connection-status">DISCONNECTED</span>
-            <div class="status-dot" id="dot"></div>
+        <div class="brand">BIODOME OS</div>
+        <div class="status-ind">
+            <span id="conn-text">OFFLINE</span>
+            <div class="dot" id="conn-dot"></div>
         </div>
     </div>
 
-    <div id="app-container">
-        
-        <div id="view-home" class="page active">
+    <div id="app-viewport">
+        <div id="tab-home" class="page active">
             <div class="card">
-                <h2>Live Feed</h2>
-                <div class="cam-frame">
-                    <div class="rec-tag">REC</div>
-                    <img id="camImg" src="" alt="NO SIGNAL">
+                <div class="help-btn" onclick="showHelp('home')">?</div>
+                <h2>Live Monitoring</h2>
+                <div class="cam-feed">
+                    <div class="rec-dot">LIVE</div>
+                    <img id="cam-img" src="" alt="NO SIGNAL">
                 </div>
             </div>
-
             <div class="sensor-grid">
-                <div class="sensor-item card">
-                    <div class="sensor-label">Temperature</div>
-                    <div class="sensor-value"><span id="val-temp">--</span>°C</div>
+                <div class="sensor-box">
+                    <span class="s-val"><span id="val-temp">--</span>°C</span>
+                    <span class="s-lbl">Air Temp</span>
                 </div>
-                <div class="sensor-item card">
-                    <div class="sensor-label">Humidity</div>
-                    <div class="sensor-value"><span id="val-hum">--</span>%</div>
+                <div class="sensor-box">
+                    <span class="s-val"><span id="val-hum">--</span>%</span>
+                    <span class="s-lbl">Humidity</span>
                 </div>
-                <div class="sensor-item card">
-                    <div class="sensor-label">Soil Moisture</div>
-                    <div class="sensor-value"><span id="val-soil">--</span>%</div>
+                <div class="sensor-box">
+                    <span class="s-val"><span id="val-soil">--</span>%</span>
+                    <span class="s-lbl">Soil Moisture</span>
                 </div>
-                <div class="sensor-item card">
-                    <div class="sensor-label">Nutrients (NPK)</div>
-                    <div class="sensor-value" style="font-size: 1.2rem;" id="val-npk">-- - -- - --</div>
+                <div class="sensor-box">
+                    <span class="s-val" id="val-npk" style="font-size: 1.2rem;">- - -</span>
+                    <span class="s-lbl">N - P - K</span>
                 </div>
             </div>
         </div>
 
-        <div id="view-manual" class="page">
+        <div id="tab-manual" class="page">
             <div class="card">
+                <div class="help-btn" onclick="showHelp('manual')">?</div>
                 <h2>System Override</h2>
-                <p style="color: #888; font-size: 0.9rem;">Warning: Manual mode disables automated safety protocols.</p>
-                
-                <div class="control-row">
-                    <span>OPERATING MODE</span>
-                    <button id="btn-mode" class="btn-toggle" onclick="toggleMode()">AUTO</button>
+                <div class="toggle-row">
+                    <span>OPERATION MODE</span>
+                    <button id="btn-mode" class="btn-toggle" onclick="iot.toggleMode()">AUTO</button>
                 </div>
-
-                <div id="manual-panel" style="opacity: 0.5; pointer-events: none;">
-                    <div class="control-row">
+                <div id="manual-controls" style="opacity: 0.5; pointer-events: none; transition: 0.3s;">
+                    <div class="toggle-row">
                         <span>Exhaust Fan</span>
-                        <button class="btn-toggle" id="btn-fan" onclick="toggleDevice('fan')">OFF</button>
+                        <button id="btn-fan" class="btn-toggle" onclick="iot.toggleDevice('fan')">OFF</button>
                     </div>
-                    <div class="control-row">
-                        <span>Irrigation Pump</span>
-                        <button class="btn-toggle" id="btn-pump" onclick="toggleDevice('pump')">OFF</button>
+                    <div class="toggle-row">
+                        <span>Water Pump</span>
+                        <button id="btn-pump" class="btn-toggle" onclick="iot.toggleDevice('pump')">OFF</button>
                     </div>
-                    <div class="control-row">
-                        <span>Grow Lights</span>
-                        <button class="btn-toggle" id="btn-light" onclick="toggleDevice('light')">OFF</button>
+                    <div class="toggle-row">
+                        <span>NPK Nutrient Pump</span>
+                        <button id="btn-npk" class="btn-toggle" onclick="iot.toggleDevice('npk_pump')">OFF</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="view-auto" class="page">
+        <div id="tab-config" class="page">
             <div class="card">
-                <h2>Threshold Config</h2>
-                <div class="input-group">
+                <div class="help-btn" onclick="showHelp('config')">?</div>
+                <h2>Automation Thresholds</h2>
+                <div class="input-row">
                     <label>Max Temperature (°C)</label>
-                    <input type="number" id="set-temp" placeholder="e.g. 28">
+                    <input type="number" id="cfg-temp" placeholder="Fan triggers above this...">
                 </div>
-                <div class="input-group">
+                <div class="input-row">
                     <label>Min Soil Moisture (%)</label>
-                    <input type="number" id="set-soil" placeholder="e.g. 40">
+                    <input type="number" id="cfg-soil" placeholder="Water pump triggers below this...">
                 </div>
-                <button class="btn-save" onclick="saveSettings()">UPDATE FIRMWARE</button>
+                <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+                <div style="display: flex; gap: 10px;">
+                    <div class="input-row" style="flex:1;">
+                        <label>Target N</label> <input type="number" id="cfg-n">
+                    </div>
+                    <div class="input-row" style="flex:1;">
+                        <label>Target P</label> <input type="number" id="cfg-p">
+                    </div>
+                    <div class="input-row" style="flex:1;">
+                        <label>Target K</label> <input type="number" id="cfg-k">
+                    </div>
+                </div>
+                <button class="btn-full" onclick="iot.saveConfig()">UPLOAD TO CONTROLLER</button>
             </div>
         </div>
-
-        </div>
+    </div>
 
     <div class="nav-bar">
-        <div class="nav-item active" onclick="switchTab('home', this)">
-            <span>🏠</span> HOME
+        <div class="nav-btn active" onclick="ui.switchTab('home', this)">
+            <span>🏠</span><div>HOME</div>
         </div>
-        <div class="nav-item" onclick="switchTab('manual', this)">
-            <span>🎛️</span> MANUAL
+        <div class="nav-btn" onclick="ui.switchTab('manual', this)">
+            <span>🎛️</span><div>MANUAL</div>
         </div>
-        <div class="nav-item" onclick="switchTab('auto', this)">
-            <span>⚙️</span> CONFIG
+        <div class="nav-btn" onclick="ui.switchTab('config', this)">
+            <span>⚙️</span><div>CONFIG</div>
         </div>
-        <div class="nav-item" onclick="startGame()">
-            <span>🍓</span> SYNETHOS
+        <div class="nav-btn" onclick="gameApp.open()">
+            <span style="color:var(--pink);">👾</span><div style="color:var(--pink);">THREAT</div>
         </div>
     </div>
 
-    <div id="game-ui">
+    <div id="help-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h2 id="help-title">Help</h2>
+            <p id="help-text" style="color: #ccc; line-height: 1.6;">...</p>
+            <button class="modal-close" onclick="document.getElementById('help-modal').style.display='none'">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="game-container">
         <canvas id="gc"></canvas>
-        <div class="hud">
-            <div style="display:flex; justify-content:space-between;">
-                <span style="font-family:'Orbitron'; color:red;">SYNTHETOS (BIO-THREAT)</span>
-                <span id="score" style="font-family:'Orbitron';">SCORE: 0</span>
+        
+        <div class="g-overlay">
+            <div class="hud-top">
+                <button class="game-btn-corner" onclick="gameApp.pause()">II PAUSE</button>
+                <div style="text-align: right;">
+                    <div style="font-family:'Orbitron'; color:var(--pink);">BOSS HEALTH</div>
+                    <div class="hp-bar-box" style="width: 200px;"><div class="hp-fill" id="hud-boss-hp" style="background:var(--pink); width:100%;"></div></div>
+                </div>
             </div>
-            <div class="bar-container"><div class="bar-fill" id="boss-hp"></div></div>
+            
+            <div style="position:absolute; bottom: 20px; left: 20px; width: 200px;">
+                <div style="font-family:'Orbitron'; color:var(--green);">SHIELD</div>
+                <div class="hp-bar-box"><div class="hp-fill" id="hud-player-hp" style="background:var(--green); width:100%;"></div></div>
+            </div>
+
+            <div class="touch-controls">
+                <div class="stick-zone" id="joy-zone"><div class="stick-nub" id="joy-stick"></div></div>
+                <div class="fire-btn" id="btn-fire">FIRE</div>
+            </div>
+        </div>
+
+        <div id="menu-start" class="g-menu">
+            <div class="g-title">SYNTHETOS DETECTED</div>
+            <p style="max-width: 400px; color: #ccc; margin-bottom: 30px;">
+                A digital parasite is draining the greenhouse power. Pilot the drone to neutralize it.
+            </p>
+            <div class="pc-hint">CONTROLS: WASD to Move | SPACE to Fire</div>
+            <div style="color:#888; margin-top:5px; font-size:0.8rem;">(Mobile: Use on-screen joystick)</div>
             <br>
-            <div class="bar-container" style="width: 200px; height: 10px;"><div class="bar-fill" id="player-hp"></div></div>
+            <button class="g-btn" onclick="gameApp.startMatch()">INITIATE DEFENSE</button>
+            <button class="g-btn danger" onclick="gameApp.close()">EXIT TO OS</button>
         </div>
 
-        <div class="controls-layer">
-            <div class="touch-zone" id="joystick-zone"><div id="stick"></div></div>
-            <div id="btn-action">FIRE</div>
+        <div id="menu-pause" class="g-menu" style="display:none;">
+            <div class="g-title">SYSTEM PAUSED</div>
+            <button class="g-btn" onclick="gameApp.resume()">RESUME</button>
+            <button class="g-btn danger" onclick="gameApp.close()">QUIT TO OS</button>
         </div>
 
-        <div class="game-over-screen" id="go-screen">
-            <div class="glitch-text">SYSTEM FAILURE</div>
-            <p>The Greenhouse has been overrun.</p>
-            <button class="btn-save" style="width: 200px;" onclick="closeGame()">REBOOT SYSTEM</button>
+        <div id="menu-over" class="g-menu" style="display:none;">
+            <div class="g-title" id="over-title">MISSION FAILED</div>
+            <button class="g-btn" onclick="gameApp.startMatch()">REBOOT SYSTEM</button>
+            <button class="g-btn danger" onclick="gameApp.close()">QUIT</button>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        // REPLACE WITH YOUR ACTUAL RENDER URL (No trailing slash!)
-        const SERVER_URL = "https://your-render-app-name.onrender.com"; 
-
-        // --- IOT SYSTEM ---
-        const socket = io(SERVER_URL, { transports: ['websocket', 'polling'] });
-        const els = {
-            temp: document.getElementById('val-temp'),
-            hum: document.getElementById('val-hum'),
-            soil: document.getElementById('val-soil'),
-            npk: document.getElementById('val-npk'),
-            cam: document.getElementById('camImg'),
-            dot: document.getElementById('dot'),
-            status: document.getElementById('connection-status')
+        // CONFIGURATION
+        const CONFIG = {
+            serverUrl: "https://your-render-app.onrender.com" // CHANGE THIS!
         };
 
-        // Connection Handling
-        socket.on('connect', () => {
-            els.dot.classList.add('connected');
-            els.status.innerText = "ONLINE";
-        });
-
-        socket.on('disconnect', () => {
-            els.dot.classList.remove('connected');
-            els.status.innerText = "OFFLINE";
-        });
-
-        // Data Reception
-        socket.on('sensor_data', (data) => {
-            if(data.temp) els.temp.innerText = data.temp.toFixed(1);
-            if(data.hum) els.hum.innerText = data.hum.toFixed(1);
-            // Handle Soil (Average of two sensors if available)
-            let s1 = data.soil1 || 0;
-            let s2 = data.soil2 || 0;
-            els.soil.innerText = Math.max(s1, s2); // Display wettest
-            // NPK
-            els.npk.innerText = `${data.n || 0}N - ${data.p || 0}P - ${data.k || 0}K`;
-        });
-
-        socket.on('video_frame', (b64) => {
-            els.cam.src = "data:image/jpeg;base64," + b64;
-        });
-
-        // --- UI NAVIGATION ---
-        function switchTab(viewId, navEl) {
-            // Hide all pages
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            // Show target
-            document.getElementById('view-' + viewId).classList.add('active');
-            
-            // Update Nav
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            if(navEl) navEl.classList.add('active');
-        }
-
-        // --- MANUAL CONTROLS ---
-        let isManual = false;
-        const manualPanel = document.getElementById('manual-panel');
-        const modeBtn = document.getElementById('btn-mode');
-
-        function toggleMode() {
-            isManual = !isManual;
-            modeBtn.innerText = isManual ? "MANUAL" : "AUTO";
-            modeBtn.classList.toggle('active', isManual);
-            
-            manualPanel.style.opacity = isManual ? "1" : "0.5";
-            manualPanel.style.pointerEvents = isManual ? "auto" : "none";
-            
-            socket.emit('command', { mode: isManual ? 'manual' : 'auto' });
-        }
-
-        function toggleDevice(dev) {
-            if(!isManual) return;
-            const btn = document.getElementById('btn-' + dev);
-            const isActive = btn.classList.contains('active');
-            
-            // Toggle Visual
-            if(isActive) {
-                btn.classList.remove('active');
-                btn.innerText = "OFF";
-            } else {
-                btn.classList.add('active');
-                btn.innerText = "ON";
+        // ============================================
+        // 1. UI & HELPERS
+        // ============================================
+        const ui = {
+            switchTab: (id, btn) => {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById('tab-' + id).classList.add('active');
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                if(btn) btn.classList.add('active');
             }
-            
-            // Send Command
-            socket.emit('command', { [dev]: !isActive });
-        }
+        };
 
-        function saveSettings() {
-            const t = document.getElementById('set-temp').value;
-            const s = document.getElementById('set-soil').value;
+        function showHelp(page) {
+            const modal = document.getElementById('help-modal');
+            const title = document.getElementById('help-title');
+            const text = document.getElementById('help-text');
             
-            if(t && s) {
-                socket.emit('command', { set_temp: t, set_soil: s });
-                alert("Thresholds uploaded to BioDome Controller.");
-            } else {
-                alert("Please fill all fields.");
+            modal.style.display = 'flex';
+            if(page === 'home') {
+                title.innerText = "Monitor Dashboard";
+                text.innerText = "View real-time sensor data from the Arduino. If the dot is green, you are connected. The camera feed updates automatically.";
+            } else if (page === 'manual') {
+                title.innerText = "Manual Override";
+                text.innerText = "1. Click 'AUTO' to switch to 'MANUAL' mode.\n2. Once enabled, click buttons to toggle devices physically.\n\nWARNING: Safety limits are off in Manual Mode.";
+            } else if (page === 'config') {
+                title.innerText = "Automation Settings";
+                text.innerText = "Set the trigger points for the automated system. The Arduino will use these values when in AUTO mode to turn fans or pumps on/off.";
             }
         }
 
         // ============================================
-        // === PROJECT SYNTHETOS (GAME ENGINE) ===
+        // 2. IOT MANAGER (Socket.io)
         // ============================================
-        const canvas = document.getElementById('gc');
-        const ctx = canvas.getContext('2d');
-        let gameRunning = false;
-        let animationId;
+        const iot = {
+            socket: null,
+            isManual: false,
+            
+            init: () => {
+                iot.socket = io(CONFIG.serverUrl, { transports: ['websocket', 'polling'] });
+                
+                // Connection Status
+                iot.socket.on('connect', () => {
+                    document.getElementById('conn-text').innerText = "ONLINE";
+                    document.getElementById('conn-dot').classList.add('online');
+                });
+                iot.socket.on('disconnect', () => {
+                    document.getElementById('conn-text').innerText = "OFFLINE";
+                    document.getElementById('conn-dot').classList.remove('online');
+                });
 
-        // Game State
-        const game = {
+                // Sensor Data
+                iot.socket.on('sensor_data', (data) => {
+                    if(data.temp) document.getElementById('val-temp').innerText = data.temp.toFixed(1);
+                    if(data.hum) document.getElementById('val-hum').innerText = data.hum.toFixed(1);
+                    if(data.soil) document.getElementById('val-soil').innerText = data.soil;
+                    if(data.n !== undefined) document.getElementById('val-npk').innerText = `${data.n}-${data.p}-${data.k}`;
+                });
+
+                // Camera
+                iot.socket.on('video_frame', (b64) => {
+                    document.getElementById('cam-img').src = "data:image/jpeg;base64," + b64;
+                });
+            },
+
+            toggleMode: () => {
+                iot.isManual = !iot.isManual;
+                const btn = document.getElementById('btn-mode');
+                const panel = document.getElementById('manual-controls');
+                
+                btn.innerText = iot.isManual ? "MANUAL" : "AUTO";
+                btn.classList.toggle('mode-man', iot.isManual);
+                
+                panel.style.opacity = iot.isManual ? "1" : "0.5";
+                panel.style.pointerEvents = iot.isManual ? "auto" : "none";
+
+                iot.socket.emit('command', { mode: iot.isManual ? 'manual' : 'auto' });
+            },
+
+            toggleDevice: (devId) => {
+                if(!iot.isManual) return;
+                const btn = document.getElementById('btn-' + (devId === 'npk_pump' ? 'npk' : devId));
+                const isOn = btn.classList.contains('on');
+                
+                // Optimistic UI update
+                if(isOn) {
+                    btn.classList.remove('on');
+                    btn.innerText = "OFF";
+                } else {
+                    btn.classList.add('on');
+                    btn.innerText = "ON";
+                }
+
+                iot.socket.emit('command', { [devId]: !isOn });
+            },
+
+            saveConfig: () => {
+                const cfg = {
+                    set_temp: document.getElementById('cfg-temp').value,
+                    set_soil: document.getElementById('cfg-soil').value,
+                    set_n: document.getElementById('cfg-n').value,
+                    set_p: document.getElementById('cfg-p').value,
+                    set_k: document.getElementById('cfg-k').value
+                };
+                iot.socket.emit('command', cfg);
+                alert("Configuration sent to controller.");
+            }
+        };
+
+        // Initialize IoT
+        iot.init();
+
+        // =======================================================
+        // 3. PROJECT SYNTHETOS (MODULAR MINIGAME ENGINE)
+        // =======================================================
+        // Edit this section to change game rules, graphics, or AI.
+        // =======================================================
+        
+        const gameApp = {
+            canvas: document.getElementById('gc'),
+            ctx: document.getElementById('gc').getContext('2d'),
+            isRunning: false,
+            isPaused: false,
             width: 0, height: 0,
-            player: { x: 0, y: 0, r: 15, hp: 100, speed: 6, color: '#39ff14', bullets: [] },
-            boss: { x: 0, y: 0, r: 50, hp: 1000, maxHp: 1000, color: 'red', phase: 1, timer: 0, projectiles: [] },
-            particles: []
+            loopId: null,
+
+            // Entities
+            player: { x: 0, y: 0, r: 15, hp: 100, speed: 6, bullets: [] },
+            boss: { x: 0, y: 0, r: 50, hp: 1000, maxHp: 1000, timer: 0, projectiles: [] },
+            particles: [],
+
+            // Input State
+            keys: { w: false, a: false, s: false, d: false, space: false },
+            joy: { active: false, dx: 0, dy: 0, id: null, startX: 0, startY: 0 },
+
+            open: () => {
+                document.getElementById('game-container').style.display = 'block';
+                document.querySelector('.nav-bar').style.display = 'none';
+                gameApp.resize();
+                // Show Start Menu
+                document.getElementById('menu-start').style.display = 'flex';
+                document.getElementById('menu-pause').style.display = 'none';
+                document.getElementById('menu-over').style.display = 'none';
+            },
+
+            close: () => {
+                gameApp.isRunning = false;
+                cancelAnimationFrame(gameApp.loopId);
+                document.getElementById('game-container').style.display = 'none';
+                document.querySelector('.nav-bar').style.display = 'flex';
+            },
+
+            resize: () => {
+                gameApp.width = window.innerWidth;
+                gameApp.height = window.innerHeight;
+                gameApp.canvas.width = gameApp.width;
+                gameApp.canvas.height = gameApp.height;
+            },
+
+            startMatch: () => {
+                // Reset State
+                gameApp.player.x = gameApp.width / 2;
+                gameApp.player.y = gameApp.height - 100;
+                gameApp.player.hp = 100;
+                gameApp.player.bullets = [];
+                
+                gameApp.boss.x = gameApp.width / 2;
+                gameApp.boss.y = 100;
+                gameApp.boss.hp = 1000;
+                gameApp.boss.projectiles = [];
+                gameApp.boss.timer = 0;
+                gameApp.particles = [];
+
+                // UI
+                document.getElementById('menu-start').style.display = 'none';
+                document.getElementById('menu-over').style.display = 'none';
+                document.getElementById('menu-pause').style.display = 'none';
+                
+                gameApp.isRunning = true;
+                gameApp.isPaused = false;
+                gameApp.loop();
+            },
+
+            pause: () => {
+                if(!gameApp.isRunning) return;
+                gameApp.isPaused = true;
+                document.getElementById('menu-pause').style.display = 'flex';
+            },
+
+            resume: () => {
+                gameApp.isPaused = false;
+                document.getElementById('menu-pause').style.display = 'none';
+                gameApp.loop();
+            },
+
+            gameOver: (win) => {
+                gameApp.isRunning = false;
+                const title = document.getElementById('over-title');
+                title.innerText = win ? "THREAT ELIMINATED" : "SYSTEM FAILURE";
+                title.style.color = win ? "var(--green)" : "var(--pink)";
+                document.getElementById('menu-over').style.display = 'flex';
+            },
+
+            // --- GAME LOOP ---
+            loop: () => {
+                if(!gameApp.isRunning || gameApp.isPaused) return;
+
+                const ctx = gameApp.ctx;
+                const g = gameApp;
+
+                // 1. Clear & Trails
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(0,0, g.width, g.height);
+
+                // 2. Logic: Player Movement
+                // Keyboard Input
+                let dx = 0, dy = 0;
+                if(g.keys.w) dy = -1;
+                if(g.keys.s) dy = 1;
+                if(g.keys.a) dx = -1;
+                if(g.keys.d) dx = 1;
+                // Joystick Input (overrides keyboard if active)
+                if(g.joy.active) { dx = g.joy.dx; dy = g.joy.dy; }
+
+                // Normalize vector
+                const mag = Math.sqrt(dx*dx + dy*dy);
+                if(mag > 0 && !g.joy.active) { dx/=mag; dy/=mag; } // Normalize keys only
+
+                g.player.x += dx * g.player.speed;
+                g.player.y += dy * g.player.speed;
+                
+                // Boundaries
+                g.player.x = Math.max(15, Math.min(g.width-15, g.player.x));
+                g.player.y = Math.max(15, Math.min(g.height-15, g.player.y));
+
+                // 3. Logic: Shooting
+                if(g.keys.space && g.player.bullets.length < 5) {
+                    g.player.bullets.push({x: g.player.x, y: g.player.y, vx: 0, vy: -15});
+                    g.keys.space = false; // Semi-auto
+                }
+
+                // 4. Render Player
+                ctx.shadowBlur = 10; ctx.shadowColor = 'var(--green)';
+                ctx.fillStyle = '#39ff14';
+                ctx.beginPath(); ctx.arc(g.player.x, g.player.y, g.player.r, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // 5. Player Bullets
+                ctx.fillStyle = '#ffff00';
+                for(let i = g.player.bullets.length-1; i>=0; i--) {
+                    let b = g.player.bullets[i];
+                    b.y += b.vy;
+                    ctx.fillRect(b.x-2, b.y-5, 4, 10);
+                    
+                    // Collision Boss
+                    let dist = Math.hypot(b.x - g.boss.x, b.y - g.boss.y);
+                    if(dist < g.boss.r) {
+                        g.boss.hp -= 15;
+                        g.player.bullets.splice(i, 1);
+                        // Particles
+                        for(let k=0; k<5; k++) g.particles.push({x: b.x, y: b.y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 10});
+                    } else if (b.y < 0) g.player.bullets.splice(i, 1);
+                }
+
+                // 6. Boss Logic
+                g.boss.timer++;
+                g.boss.x = (g.width/2) + Math.sin(g.boss.timer * 0.02) * (g.width * 0.3);
+                
+                // Boss Shoot
+                if(g.boss.timer % 50 === 0) {
+                    if(Math.random() > 0.5) {
+                         // Spread
+                         g.boss.projectiles.push({x: g.boss.x, y: g.boss.y, vx: -3, vy: 5});
+                         g.boss.projectiles.push({x: g.boss.x, y: g.boss.y, vx: 3, vy: 5});
+                         g.boss.projectiles.push({x: g.boss.x, y: g.boss.y, vx: 0, vy: 6});
+                    } else {
+                        // Aimed
+                        let angle = Math.atan2(g.player.y - g.boss.y, g.player.x - g.boss.x);
+                        g.boss.projectiles.push({x: g.boss.x, y: g.boss.y, vx: Math.cos(angle)*8, vy: Math.sin(angle)*8});
+                    }
+                }
+
+                // Render Boss
+                ctx.shadowBlur = 20; ctx.shadowColor = 'red';
+                ctx.fillStyle = g.boss.hp > 300 ? '#ff0055' : '#purple';
+                ctx.beginPath();
+                ctx.moveTo(g.boss.x, g.boss.y + 40);
+                ctx.lineTo(g.boss.x - 40, g.boss.y - 40);
+                ctx.lineTo(g.boss.x + 40, g.boss.y - 40);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // Boss Projectiles
+                ctx.fillStyle = '#ff0055';
+                for(let i = g.boss.projectiles.length-1; i>=0; i--) {
+                    let p = g.boss.projectiles[i];
+                    p.x += p.vx; p.y += p.vy;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
+
+                    // Hit Player
+                    if(Math.hypot(p.x - g.player.x, p.y - g.player.y) < g.player.r + 5) {
+                        g.player.hp -= 20;
+                        g.boss.projectiles.splice(i, 1);
+                    }
+                    if(p.y > g.height) g.boss.projectiles.splice(i, 1);
+                }
+
+                // 7. Particles
+                ctx.fillStyle = 'white';
+                for(let i=g.particles.length-1; i>=0; i--) {
+                    let pt = g.particles[i];
+                    pt.x += pt.vx; pt.y += pt.vy;
+                    pt.life--;
+                    ctx.fillRect(pt.x, pt.y, 2, 2);
+                    if(pt.life <= 0) g.particles.splice(i, 1);
+                }
+
+                // 8. HUD Update
+                document.getElementById('hud-player-hp').style.width = g.player.hp + "%";
+                document.getElementById('hud-boss-hp').style.width = (g.boss.hp/g.boss.maxHp * 100) + "%";
+
+                // 9. Win/Lose Check
+                if(g.player.hp <= 0) g.gameOver(false);
+                if(g.boss.hp <= 0) g.gameOver(true);
+
+                g.loopId = requestAnimationFrame(g.loop);
+            }
         };
 
-        // Joystick Logic (Failsafe for ghost touches)
-        const joystick = { active: false, id: null, dx: 0, dy: 0, originX: 0, originY: 0 };
-        const joyZone = document.getElementById('joystick-zone');
-        const stick = document.getElementById('stick');
+        // --- INPUT HANDLERS (Keyboard) ---
+        window.addEventListener('keydown', (e) => {
+            if(e.key === 'w') gameApp.keys.w = true;
+            if(e.key === 'a') gameApp.keys.a = true;
+            if(e.key === 's') gameApp.keys.s = true;
+            if(e.key === 'd') gameApp.keys.d = true;
+            if(e.key === ' ') {
+                if(gameApp.isRunning) gameApp.keys.space = true;
+                e.preventDefault(); // Stop scrolling
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            if(e.key === 'w') gameApp.keys.w = false;
+            if(e.key === 'a') gameApp.keys.a = false;
+            if(e.key === 's') gameApp.keys.s = false;
+            if(e.key === 'd') gameApp.keys.d = false;
+            if(e.key === ' ') gameApp.keys.space = false;
+            if(e.key === 'Escape' && gameApp.isRunning) gameApp.pause();
+        });
 
+        // --- INPUT HANDLERS (Touch/Mobile) ---
+        const joyZone = document.getElementById('joy-zone');
+        const stick = document.getElementById('joy-stick');
+        const fireBtn = document.getElementById('btn-fire');
+
+        // Joystick Logic
         joyZone.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            const touch = e.changedTouches[0];
-            joystick.id = touch.identifier;
-            joystick.active = true;
-            joystick.originX = touch.clientX;
-            joystick.originY = touch.clientY;
-            
-            // Snap stick to finger initially
+            const t = e.changedTouches[0];
+            gameApp.joy.id = t.identifier;
+            gameApp.joy.active = true;
+            gameApp.joy.startX = t.clientX;
+            gameApp.joy.startY = t.clientY;
             stick.style.transition = 'none';
-        });
+        }, {passive: false});
 
         joyZone.addEventListener('touchmove', (e) => {
             e.preventDefault();
+            if(!gameApp.joy.active) return;
             for(let i=0; i<e.changedTouches.length; i++) {
-                if(e.changedTouches[i].identifier === joystick.id) {
+                if(e.changedTouches[i].identifier === gameApp.joy.id) {
                     const t = e.changedTouches[i];
-                    let dx = t.clientX - joystick.originX;
-                    let dy = t.clientY - joystick.originY;
+                    let dx = t.clientX - gameApp.joy.startX;
+                    let dy = t.clientY - gameApp.joy.startY;
                     
-                    // Clamp
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    const max = 40;
-                    if(dist > max) {
-                        dx = (dx/dist) * max;
-                        dy = (dy/dist) * max;
-                    }
+                    // Clamp visual
+                    const dist = Math.min(40, Math.hypot(dx, dy));
+                    const angle = Math.atan2(dy, dx);
+                    dx = Math.cos(angle) * dist;
+                    dy = Math.sin(angle) * dist;
                     
-                    joystick.dx = dx / max; // Normalized -1 to 1
-                    joystick.dy = dy / max;
-                    
+                    // Set Game Vector (-1 to 1)
+                    gameApp.joy.dx = dx / 40;
+                    gameApp.joy.dy = dy / 40;
+
                     stick.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
                 }
             }
-        });
+        }, {passive: false});
 
-        const resetJoystick = () => {
-            joystick.active = false;
-            joystick.id = null;
-            joystick.dx = 0; joystick.dy = 0;
+        const resetJoy = () => {
+            gameApp.joy.active = false;
+            gameApp.joy.dx = 0; gameApp.joy.dy = 0;
             stick.style.transition = '0.2s';
             stick.style.transform = `translate(-50%, -50%)`;
         };
-        joyZone.addEventListener('touchend', resetJoystick);
+        joyZone.addEventListener('touchend', resetJoy);
+        joyZone.addEventListener('touchcancel', resetJoy);
 
-        // Shooting
-        document.getElementById('btn-action').addEventListener('touchstart', (e) => {
+        // Fire Button
+        fireBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            if(gameRunning) spawnBullet();
+            if(gameApp.isRunning) {
+                gameApp.player.bullets.push({x: gameApp.player.x, y: gameApp.player.y, vx: 0, vy: -15});
+            }
         });
-
-        function startGame() {
-            document.getElementById('game-ui').style.display = 'block';
-            document.querySelector('.nav-bar').style.display = 'none';
-            resizeGame();
-            
-            // Reset Stats
-            game.player.hp = 100;
-            game.player.x = game.width / 2;
-            game.player.y = game.height - 100;
-            
-            game.boss.hp = 1000;
-            game.boss.projectiles = [];
-            game.player.bullets = [];
-            game.particles = [];
-            
-            gameRunning = true;
-            document.getElementById('go-screen').style.display = 'none';
-            loop();
-        }
-
-        function closeGame() {
-            gameRunning = false;
-            cancelAnimationFrame(animationId);
-            document.getElementById('game-ui').style.display = 'none';
-            document.querySelector('.nav-bar').style.display = 'flex';
-        }
-
-        function resizeGame() {
-            game.width = window.innerWidth;
-            game.height = window.innerHeight;
-            canvas.width = game.width;
-            canvas.height = game.height;
-        }
-
-        function spawnBullet() {
-            game.player.bullets.push({ x: game.player.x, y: game.player.y, vx: 0, vy: -15 });
-        }
-
-        function loop() {
-            if(!gameRunning) return;
-            
-            // Clear
-            ctx.fillStyle = 'rgba(0,0,0,0.2)'; // Trails
-            ctx.fillRect(0,0, game.width, game.height);
-            
-            // --- PLAYER ---
-            if(joystick.active) {
-                game.player.x += joystick.dx * game.player.speed;
-                game.player.y += joystick.dy * game.player.speed;
-            }
-            // Clamp Player
-            game.player.x = Math.max(15, Math.min(game.width-15, game.player.x));
-            game.player.y = Math.max(15, Math.min(game.height-15, game.player.y));
-
-            // Draw Player
-            ctx.shadowBlur = 10; ctx.shadowColor = game.player.color;
-            ctx.fillStyle = game.player.color;
-            ctx.beginPath(); ctx.arc(game.player.x, game.player.y, game.player.r, 0, Math.PI*2); ctx.fill();
-            ctx.shadowBlur = 0;
-
-            // --- PLAYER BULLETS ---
-            ctx.fillStyle = '#ffff00';
-            for(let i = game.player.bullets.length-1; i>=0; i--) {
-                let b = game.player.bullets[i];
-                b.y += b.vy;
-                ctx.fillRect(b.x-2, b.y-5, 4, 10);
-                
-                // Collision Boss
-                let dx = b.x - game.boss.x;
-                let dy = b.y - game.boss.y;
-                if(Math.sqrt(dx*dx + dy*dy) < game.boss.r) {
-                    game.boss.hp -= 10;
-                    game.player.bullets.splice(i, 1);
-                    // Spawn particle
-                    game.particles.push({x: b.x, y: b.y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, life: 10});
-                } else if (b.y < 0) {
-                    game.player.bullets.splice(i, 1);
-                }
-            }
-
-            // --- BOSS ---
-            game.boss.timer++;
-            game.boss.x = (game.width/2) + Math.sin(game.boss.timer * 0.02) * 100;
-            game.boss.y = 100 + Math.cos(game.boss.timer * 0.05) * 20;
-
-            // Boss Attacks (AI)
-            if(game.boss.timer % 40 === 0) {
-                // Phase 1: Spread
-                if(game.boss.hp > 500) {
-                    game.boss.projectiles.push({x: game.boss.x, y: game.boss.y, vx: -2, vy: 5});
-                    game.boss.projectiles.push({x: game.boss.x, y: game.boss.y, vx: 2, vy: 5});
-                    game.boss.projectiles.push({x: game.boss.x, y: game.boss.y, vx: 0, vy: 6});
-                } 
-                // Phase 2: Aimed Stream
-                else {
-                    let angle = Math.atan2(game.player.y - game.boss.y, game.player.x - game.boss.x);
-                    game.boss.projectiles.push({
-                        x: game.boss.x, y: game.boss.y,
-                        vx: Math.cos(angle)*8, vy: Math.sin(angle)*8
-                    });
-                }
-            }
-
-            // Draw Boss
-            ctx.shadowBlur = 20; ctx.shadowColor = 'red';
-            ctx.fillStyle = game.boss.hp > 500 ? 'red' : 'purple';
-            ctx.beginPath(); 
-            // Triangle shape
-            ctx.moveTo(game.boss.x, game.boss.y + game.boss.r);
-            ctx.lineTo(game.boss.x - game.boss.r, game.boss.y - game.boss.r);
-            ctx.lineTo(game.boss.x + game.boss.r, game.boss.y - game.boss.r);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            // --- BOSS PROJECTILES ---
-            ctx.fillStyle = '#ff0055';
-            for(let i = game.boss.projectiles.length-1; i>=0; i--) {
-                let p = game.boss.projectiles[i];
-                p.x += p.vx; p.y += p.vy;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
-
-                // Hit Player
-                let dx = p.x - game.player.x;
-                let dy = p.y - game.player.y;
-                if(Math.sqrt(dx*dx + dy*dy) < game.player.r + 5) {
-                    game.player.hp -= 10;
-                    game.boss.projectiles.splice(i, 1);
-                }
-                
-                if(p.y > game.height || p.x < 0 || p.x > game.width) game.boss.projectiles.splice(i, 1);
-            }
-
-            // Particles
-            ctx.fillStyle = 'white';
-            for(let i=game.particles.length-1; i>=0; i--) {
-                let pt = game.particles[i];
-                pt.x += pt.vx; pt.y += pt.vy;
-                pt.life--;
-                ctx.fillRect(pt.x, pt.y, 2, 2);
-                if(pt.life <= 0) game.particles.splice(i,1);
-            }
-
-            // Update UI
-            document.getElementById('boss-hp').style.width = (game.boss.hp / 1000 * 100) + "%";
-            document.getElementById('player-hp').style.width = game.player.hp + "%";
-
-            // Win/Loss
-            if(game.player.hp <= 0) {
-                document.getElementById('go-screen').style.display = 'flex';
-                gameRunning = false;
-            }
-            if(game.boss.hp <= 0) {
-                alert("SYNETHOS NEUTRALIZED. Greenhouse Safe.");
-                closeGame();
-            }
-
-            animationId = requestAnimationFrame(loop);
-        }
 
     </script>
 </body>
