@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BioCube OS v4.0 | Synthetos</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+
     <style>
         /* --- CORE VARIABLES & RESET --- */
         :root {
@@ -49,7 +50,7 @@
 
         #app-viewport { flex: 1; position: relative; overflow-y: auto; padding-bottom: 80px; }
 
-        .page { display: none; padding: 20px; max-width: 800px; margin: 0 auto; animation: slideUp 0.3s ease; }
+        .page { display: none; padding: 20px; max-width: 1000px; margin: 0 auto; animation: slideUp 0.3s ease; }
         .page.active { display: block; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -64,7 +65,7 @@
             position: relative;
         }
         h2 { margin: 0 0 15px 0; color: var(--cyan); font-family: 'Orbitron'; font-size: 1.2rem; border-bottom: 1px solid #333; padding-bottom: 8px; }
-        
+
         .help-btn {
             position: absolute; top: 15px; right: 15px; width: 28px; height: 28px;
             border: 1px solid #666; border-radius: 50%; text-align: center; line-height: 26px;
@@ -79,7 +80,7 @@
 
         /* --- CAMERA STYLES --- */
         .cam-feed { 
-            width: 100%; height: 200px; background: #000; border: 1px solid #333; 
+            width: 100%; height: 240px; background: #000; border: 1px solid #333; 
             position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;
             cursor: pointer; /* Hint that it's clickable */
         }
@@ -88,14 +89,15 @@
             transform: rotate(180deg); /* rotate image only to correct physical orientation */
         }
         .rec-dot { 
-            position: absolute; top: 10px; left: 10px; color: red; font-size: 0.8rem; 
+            position: absolute; top: 10px; left: 10px; font-size: 0.9rem; 
             font-weight: bold; animation: blink 1s infinite; z-index: 10;
+            background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; color: #bbb;
             transform: rotate(0deg); /* ensure upright */
-            background: rgba(0,0,0,0.5); padding: 3px 6px; border-radius: 6px;
         }
-        .cam-feed .sig-off { color: #bbb; background: rgba(255,0,85,0.06); border: 1px solid rgba(255,255,255,0.05); }
+        .rec-dot.live { color: var(--green); background: rgba(0,0,0,0.6); border: 1px solid rgba(0,255,0,0.05); }
+        .rec-dot.off { color: #bbb; background: rgba(255,0,85,0.06); border: 1px solid rgba(255,255,255,0.05); }
         .cam-hint {
-            position: absolute; bottom: 5px; right: 10px; font-size: 0.7rem; color: rgba(255,255,255,0.5); pointer-events: none;
+            position: absolute; bottom: 8px; right: 12px; font-size: 0.75rem; color: rgba(255,255,255,0.5); pointer-events: none;
         }
 
         /* Fullscreen Cam Modal */
@@ -128,7 +130,7 @@
             background: #0a0a0f; border-top: 1px solid #333;
             display: flex; justify-content: space-around; align-items: center; z-index: 100;
         }
-        .nav-btn { display: flex; flex-direction: column; align-items: center; color: #555; cursor: pointer; flex: 1; }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; color: #555; cursor: pointer; flex: 1; padding: 8px 0; }
         .nav-btn span { font-size: 1.4rem; margin-bottom: 4px; }
         .nav-btn div { font-size: 0.7rem; letter-spacing: 1px; }
         .nav-btn.active { color: var(--cyan); text-shadow: 0 0 10px rgba(0,243,255,0.5); }
@@ -138,7 +140,7 @@
             background: rgba(0,0,0,0.85); z-index: 2000;
             display: none; align-items: center; justify-content: center;
         }
-        .modal-box { background: #1a1a20; border: 1px solid #444; padding: 30px; border-radius: 8px; max-width: 90%; width: 400px; }
+        .modal-box { background: #1a1a20; border: 1px solid #444; padding: 30px; border-radius: 8px; max-width: 90%; width: 420px; }
         .modal-close { margin-top: 20px; background: #333; color: white; border: none; padding: 10px 20px; width: 100%; cursor: pointer; }
 
         /* --- GAME UI LAYERS --- */
@@ -146,7 +148,7 @@
         canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 
         .g-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
-        
+
         /* HUD */
         .hud-top { padding: 20px; display: flex; justify-content: space-between; width: 100%; }
         .hp-bar-box { width: 100%; height: 12px; background: #333; border: 1px solid #555; margin-top: 5px; overflow: hidden;}
@@ -190,7 +192,7 @@
 
         .stick-zone { width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); pointer-events: auto; position: relative; }
         .stick-nub { width: 50px; height: 50px; background: rgba(255,255,255,0.5); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
-        
+
         .action-btns { display: flex; gap: 15px; pointer-events: auto; }
         .fire-btn {
             width: 90px; height: 90px; border-radius: 50%; background: rgba(255, 0, 85, 0.2);
@@ -201,7 +203,7 @@
         .fire-btn:active { background: white; color: black; }
 
         @keyframes blink { 50% { opacity: 0; } }
-        
+
         /* Dash Cooldown Indicator */
         #dash-overlay { position: absolute; bottom: 80px; right: 140px; color: var(--yellow); font-family: 'Orbitron'; font-size: 0.8rem; opacity: 0; transition: 0.2s;}
         #dash-overlay.visible { opacity: 1; }
@@ -229,7 +231,7 @@
                 <div class="help-btn" onclick="showHelp('home')">?</div>
                 <h2>Live Monitoring</h2>
                 <div class="cam-feed" ondblclick="openCamModal()" id="cam-feed">
-                    <div class="rec-dot" id="cam-live">NO SIGNAL</div>
+                    <div class="rec-dot off" id="cam-live">NO SIGNAL</div>
                     <img id="cam-img" src="" alt="NO SIGNAL">
                     <div class="cam-hint">Double-tap for Fullscreen</div>
                 </div>
@@ -264,7 +266,7 @@
                 </div>
                 <div id="manual-controls" style="opacity: 0.5; pointer-events: none; transition: 0.3s;">
                     <div class="toggle-row">
-                        <span>Exhaust Fan (humidity-based)</span>
+                        <span>Exhaust Fan (humidity)</span>
                         <button id="btn-fan" class="btn-toggle" onclick="iot.toggleDevice('exhaust')">OFF</button>
                     </div>
                     <div class="toggle-row">
@@ -335,9 +337,9 @@
 
     <div id="game-container">
         <div class="rotate-msg">⚠️ ROTATE DEVICE TO LANDSCAPE ⚠️</div>
-        
+
         <canvas id="gc"></canvas>
-        
+
         <div class="g-overlay">
             <div class="hud-top">
                 <button class="game-btn-corner" onclick="gameApp.pause()">II PAUSE</button>
@@ -346,7 +348,7 @@
                     <div class="hp-bar-box" style="width: 200px;"><div class="hp-fill" id="hud-boss-hp" style="background:var(--pink); width:100%;"></div></div>
                 </div>
             </div>
-            
+
             <div style="position:absolute; bottom: 20px; left: 20px; width: 200px;">
                 <div style="font-family:'Orbitron'; color:var(--green);">SHIELD INTEGRITY</div>
                 <div class="hp-bar-box"><div class="hp-fill" id="hud-player-hp" style="background:var(--green); width:100%;"></div></div>
@@ -394,7 +396,7 @@
 
     <script>
         const CONFIG = {
-            serverUrl: "https://your-render-app.onrender.com" // CHANGE THIS
+            serverUrl: "https://your-render-app.onrender.com" // CHANGE THIS to your server
         };
 
         // --- 1. UI HELPERS ---
@@ -428,6 +430,7 @@
         function openCamModal() {
             document.getElementById('cam-modal').style.display = 'flex';
             document.getElementById('cam-modal-img').src = document.getElementById('cam-img').src;
+            document.getElementById('cam-modal-live').hidden = false;
         }
         function closeCamModal() { 
             document.getElementById('cam-modal').style.display = 'none'; 
@@ -446,14 +449,14 @@
                     console.warn("Socket init failed:", e);
                     document.getElementById('conn-text').innerText = "OFFLINE";
                 }
-                
+
                 if(!iot.socket) return;
 
                 iot.socket.on('connect', () => {
                     document.getElementById('conn-text').innerText = "ONLINE";
                     document.getElementById('conn-dot').classList.add('online');
                 });
-                
+
                 iot.socket.on('disconnect', () => {
                     document.getElementById('conn-text').innerText = "OFFLINE";
                     document.getElementById('conn-dot').classList.remove('online');
@@ -481,8 +484,8 @@
                         iot.lastFrameAt = Date.now();
                         const live = document.getElementById('cam-live');
                         live.innerText = "LIVE";
-                        live.style.color = "var(--green)";
-                        live.classList.remove('sig-off');
+                        live.classList.remove('off');
+                        live.classList.add('live');
                         // modal if open
                         if(document.getElementById('cam-modal').style.display === 'flex') {
                             document.getElementById('cam-modal-img').src = src;
@@ -499,20 +502,18 @@
                     const now = Date.now();
                     if(iot.lastFrameAt === 0 || (now - iot.lastFrameAt) > 2500) {
                         live.innerText = "NO SIGNAL";
-                        live.style.color = "#bbb";
-                        live.classList.add('sig-off');
+                        live.classList.remove('live');
+                        live.classList.add('off');
                         // clear image only visually (don't remove src to avoid flicker)
-                        // optionally show placeholder:
                         document.getElementById('cam-img').alt = "NO SIGNAL";
                         if(document.getElementById('cam-modal').style.display === 'flex') {
                             document.getElementById('cam-modal-live').hidden = true;
                         }
                     } else {
-                        // live
                         if(live.innerText !== "LIVE") {
                             live.innerText = "LIVE";
-                            live.style.color = "var(--green)";
-                            live.classList.remove('sig-off');
+                            live.classList.remove('off');
+                            live.classList.add('live');
                         }
                     }
                 }, 900);
@@ -522,7 +523,7 @@
                 iot.isManual = !iot.isManual;
                 const btn = document.getElementById('btn-mode');
                 const panel = document.getElementById('manual-controls');
-                
+
                 btn.innerText = iot.isManual ? "MANUAL" : "AUTO";
                 btn.classList.toggle('mode-man', iot.isManual);
                 panel.style.opacity = iot.isManual ? "1" : "0.5";
@@ -532,22 +533,21 @@
 
             toggleDevice: (devId) => {
                 if(!iot.isManual) return;
-                // guard UI mapping
+                // map to UI button ids
                 const btnMap = { 'pump_n': 'npk', 'pump_w': 'pump', 'exhaust':'fan', 'peltier':'peltier' };
-                const btn = document.getElementById('btn-' + (btnMap[devId] || btnMap[devId] === undefined ? (devId === 'exhaust' ? 'fan' : (devId === 'pump_w' ? 'pump' : (devId === 'pump_n' ? 'npk' : (devId === 'peltier' ? 'peltier' : devId))))) : 'btn-' + devId));
-                const targetBtn = btn || document.getElementById('btn-' + devId);
-                const isOn = targetBtn && targetBtn.classList.contains('on');
+                const btn = document.getElementById('btn-' + (btnMap[devId] || devId));
+                const isOn = btn && btn.classList.contains('on');
 
-                // Critical device confirmation to avoid accidental toggles
+                // Confirmation for critical devices
                 if(devId === 'peltier' || devId === 'pump_w' || devId === 'pump_n') {
                     const ok = confirm(`Confirm toggle for ${devId}. This will affect hardware directly. Proceed?`);
                     if(!ok) return;
                 }
 
                 // Optimistic UI toggle
-                if(targetBtn) {
-                    if(isOn) { targetBtn.classList.remove('on'); targetBtn.innerText = "OFF"; } 
-                    else { targetBtn.classList.add('on'); targetBtn.innerText = "ON"; }
+                if(btn) {
+                    if(isOn) { btn.classList.remove('on'); btn.innerText = "OFF"; } 
+                    else { btn.classList.add('on'); btn.innerText = "ON"; }
                 }
 
                 // Emit single device id; Peltier represents both fans (controller must handle both)
@@ -615,10 +615,10 @@
         // --- 3. SYNTHETOS GAME ENGINE (Modified & balanced) ---
         const gameApp = {
             canvas: document.getElementById('gc'),
-            ctx: document.getElementById('gc').getContext('2d'),
+            ctx: document.getElementById('gc') ? document.getElementById('gc').getContext('2d') : null,
             isRunning: false, isPaused: false,
             width: 0, height: 0, loopId: null,
-            
+
             // Game State
             phase: 0, // 0: Intro, 1: Shield, 2: Transform, 3: Unshackled
             phaseTimer: 0,
@@ -652,7 +652,7 @@
 
             close: () => {
                 gameApp.isRunning = false;
-                cancelAnimationFrame(gameApp.loopId);
+                if (gameApp.loopId) cancelAnimationFrame(gameApp.loopId);
                 document.getElementById('game-container').style.display = 'none';
                 document.querySelector('.nav-bar').style.display = 'flex';
             },
@@ -660,8 +660,10 @@
             resize: () => {
                 gameApp.width = window.innerWidth;
                 gameApp.height = window.innerHeight;
-                gameApp.canvas.width = gameApp.width;
-                gameApp.canvas.height = gameApp.height;
+                if (gameApp.canvas) {
+                    gameApp.canvas.width = gameApp.width;
+                    gameApp.canvas.height = gameApp.height;
+                }
             },
 
             startMatch: () => {
@@ -671,7 +673,7 @@
                 gameApp.player.hp = 120;
                 gameApp.player.bullets = [];
                 gameApp.player.dashCooldown = 0;
-                
+
                 gameApp.boss.x = gameApp.width / 2;
                 gameApp.boss.y = 150;
                 gameApp.boss.hp = 900;
@@ -705,6 +707,7 @@
 
             // --- DRAWING HELPERS ---
             drawPoly: (ctx, x, y, sides, radius, color, rotation = 0) => {
+                if(!ctx) return;
                 ctx.beginPath();
                 for (let i = 0; i < sides; i++) {
                     const angle = rotation + (i * 2 * Math.PI / sides);
@@ -730,6 +733,11 @@
                 if(!gameApp.isRunning || gameApp.isPaused) return;
                 const ctx = gameApp.ctx;
                 const g = gameApp;
+
+                if(!ctx) {
+                    gameApp.isRunning = false;
+                    return;
+                }
 
                 // Screen Shake
                 let rx = 0, ry = 0;
@@ -783,7 +791,7 @@
                 if(g.keys.w) dy = -1; if(g.keys.s) dy = 1;
                 if(g.keys.a) dx = -1; if(g.keys.d) dx = 1;
                 if(g.joy.active) { dx = g.joy.dx; dy = g.joy.dy; }
-                
+
                 // Dash Trigger
                 if((g.keys.shift) && g.player.dashCooldown <= 0) {
                     g.player.dashDuration = 15; // 15 frames of dash
@@ -796,10 +804,10 @@
                 // Normalize
                 const mag = Math.sqrt(dx*dx + dy*dy);
                 if(mag > 0 && !g.joy.active) { dx/=mag; dy/=mag; }
-                
+
                 g.player.x += dx * speed;
                 g.player.y += dy * speed;
-                
+
                 // Clamp
                 g.player.x = Math.max(20, Math.min(g.width-20, g.player.x));
                 g.player.y = Math.max(20, Math.min(g.height-20, g.player.y));
@@ -828,7 +836,7 @@
                     let b = g.player.bullets[i];
                     b.y += b.vy;
                     ctx.fillRect(b.x-2, b.y-10, 4, 15);
-                    
+
                     // Collision Boss
                     if(g.phase === 1 || g.phase === 3) {
                         let dist = Math.hypot(b.x - g.boss.x, b.y - g.boss.y);
@@ -864,7 +872,7 @@
                 else if (g.phase === 1) {
                     g.boss.x = (g.width/2) + Math.sin(Date.now()*0.001) * 100;
                     g.boss.attackTimer++;
-                    
+
                     // Draw: layered shield with hex + triangle motif
                     ctx.save();
                     ctx.shadowBlur = 16; ctx.shadowColor = '#ff66aa';
@@ -920,11 +928,11 @@
                     g.phaseTimer--;
                     g.boss.x = g.width/2; g.boss.y = 200;
                     document.getElementById('boss-name').innerText = "ERROR... RECONFIGURING...";
-                    
+
                     // Draw glitchy transformed shape using combined polygons
                     const scale = 1 + Math.sin(Date.now()*0.01)*0.3 + Math.random()*0.2;
                     g.drawPoly(ctx, g.boss.x, g.boss.y, 10, g.boss.r * scale, '#fff', Math.random()*10);
-                    
+
                     if(g.phaseTimer <= 0) { 
                         g.phase = 3; 
                         document.getElementById('boss-name').innerText = "CORE: UNSHACKLED";
@@ -1004,7 +1012,7 @@
                         if(pmag > 7) { p.vx = (p.vx/pmag)*7; p.vy = (p.vy/pmag)*7; }
                     }
                     p.x += p.vx; p.y += p.vy;
-                    
+
                     // Draw projectile with subtle shape depending on homing
                     ctx.beginPath();
                     if(p.homing) {
@@ -1043,7 +1051,7 @@
                 document.getElementById('hud-player-hp').style.width = Math.max(0, g.player.hp) + "%";
                 let bossPct = (g.phase < 3) ? (g.boss.hp / g.boss.maxHp * 100) : (g.boss.hp / g.boss.maxHp * 100);
                 document.getElementById('hud-boss-hp').style.width = Math.max(0, bossPct) + "%";
-                
+
                 // Dash UI
                 const dashOverlay = document.getElementById('dash-overlay');
                 if(g.player.dashCooldown <= 0) dashOverlay.classList.add('visible');
@@ -1095,51 +1103,54 @@
         // Basic anti-ghost: ignore abnormal many-finger touches
         const MAX_ACCEPTED_TOUCHES = 6;
 
-        joyZone.addEventListener('touchstart', (e) => {
-            if(e.touches.length > MAX_ACCEPTED_TOUCHES) return;
-            e.preventDefault();
-            const t = e.changedTouches[0];
-            gameApp.joy.id = t.identifier;
-            gameApp.joy.active = true;
-            gameApp.joy.startX = t.clientX;
-            gameApp.joy.startY = t.clientY;
-            stick.style.transition = 'none';
-        }, {passive: false});
+        if(joyZone){
+            joyZone.addEventListener('touchstart', (e) => {
+                if(e.touches.length > MAX_ACCEPTED_TOUCHES) return;
+                e.preventDefault();
+                const t = e.changedTouches[0];
+                gameApp.joy.id = t.identifier;
+                gameApp.joy.active = true;
+                gameApp.joy.startX = t.clientX;
+                gameApp.joy.startY = t.clientY;
+                stick.style.transition = 'none';
+            }, {passive: false});
 
-        joyZone.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if(!gameApp.joy.active) return;
-            for(let i=0; i<e.changedTouches.length; i++) {
-                if(e.changedTouches[i].identifier === gameApp.joy.id) {
-                    const t = e.changedTouches[i];
-                    let dx = t.clientX - gameApp.joy.startX;
-                    let dy = t.clientY - gameApp.joy.startY;
-                    const dist = Math.min(40, Math.hypot(dx, dy));
-                    const angle = Math.atan2(dy, dx);
-                    dx = Math.cos(angle) * dist;
-                    dy = Math.sin(angle) * dist;
-                    gameApp.joy.dx = dx / 40;
-                    gameApp.joy.dy = dy / 40;
-                    stick.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+            joyZone.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if(!gameApp.joy.active) return;
+                for(let i=0; i<e.changedTouches.length; i++) {
+                    if(e.changedTouches[i].identifier === gameApp.joy.id) {
+                        const t = e.changedTouches[i];
+                        let dx = t.clientX - gameApp.joy.startX;
+                        let dy = t.clientY - gameApp.joy.startY;
+                        const dist = Math.min(40, Math.hypot(dx, dy));
+                        const angle = Math.atan2(dy, dx);
+                        dx = Math.cos(angle) * dist;
+                        dy = Math.sin(angle) * dist;
+                        gameApp.joy.dx = dx / 40;
+                        gameApp.joy.dy = dy / 40;
+                        stick.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+                    }
                 }
-            }
-        }, {passive: false});
+            }, {passive: false});
 
-        const resetJoy = (e) => {
-             for(let i=0; i<e.changedTouches.length; i++) {
-                if(e.changedTouches[i].identifier === gameApp.joy.id) {
-                    gameApp.joy.active = false;
-                    gameApp.joy.dx = 0; gameApp.joy.dy = 0;
-                    stick.style.transition = '0.2s';
-                    stick.style.transform = `translate(-50%, -50%)`;
-                }
-             }
-        };
-        joyZone.addEventListener('touchend', resetJoy);
-        joyZone.addEventListener('touchcancel', resetJoy);
+            const resetJoy = (e) => {
+                 for(let i=0; i<e.changedTouches.length; i++) {
+                    if(e.changedTouches[i].identifier === gameApp.joy.id) {
+                        gameApp.joy.active = false;
+                        gameApp.joy.dx = 0; gameApp.joy.dy = 0;
+                        stick.style.transition = '0.2s';
+                        stick.style.transform = `translate(-50%, -50%)`;
+                    }
+                 }
+            };
+            joyZone.addEventListener('touchend', resetJoy);
+            joyZone.addEventListener('touchcancel', resetJoy);
+        }
 
         // Per-button debounced touch handlers to avoid ghost touches
         function makeButtonTouchSafe(el, onActivate, minMs = 40) {
+            if(!el) return;
             let lastTouchStart = 0;
             let activeTouchId = null;
             el.addEventListener('touchstart', (e) => {
