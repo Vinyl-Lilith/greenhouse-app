@@ -3,815 +3,852 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Biodome Controller v5.0</title>
+    <title>Biodome Controller v1.2</title>
     <style>
+        /* --- CORE VARIABLES & RESET --- */
         :root {
-            --primary-color: #2e7d32;
-            --accent-color: #66bb6a;
-            --bg-color: #121212;
-            --text-color: #e0e0e0;
-            --card-bg: #1e1e1e;
-            --danger: #d32f2f;
+            --bg-color: #1a1a1a;
+            --panel-color: #252525;
+            --text-main: #ffffff;
+            --text-dim: #b0b0b0;
+            --accent: #00e676; /* Green for Biodome */
+            --accent-hover: #00c853;
+            --danger: #ff5252;
+            --nav-height: 60px;
         }
 
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
             margin: 0;
-            padding: 0;
-            overflow-x: hidden;
+            font-family: 'Courier New', Courier, monospace; /* Retro/Terminal feel */
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow: hidden; /* Prevent body scroll, handle in main */
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            height: 100vh;
         }
 
-        /* --- Navigation --- */
-        nav {
-            background-color: #000;
-            padding: 1rem;
+        /* --- NAVIGATION --- */
+        header {
+            height: var(--nav-height);
+            background: #000;
+            border-bottom: 2px solid var(--accent);
             display: flex;
-            justify-content: space-around;
-            border-bottom: 2px solid var(--primary-color);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+            z-index: 100;
         }
 
-        nav button {
-            background: none;
-            border: 1px solid var(--accent-color);
-            color: var(--accent-color);
-            padding: 0.5rem 1rem;
+        h1 { font-size: 1.2rem; margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; }
+
+        nav { display: flex; gap: 10px; }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            padding: 8px 12px;
             cursor: pointer;
-            border-radius: 5px;
-            transition: all 0.3s;
+            font-family: inherit;
             font-weight: bold;
+            transition: 0.2s;
         }
 
-        nav button.active, nav button:hover {
-            background-color: var(--primary-color);
-            color: white;
+        .nav-btn.active, .nav-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 8px rgba(0, 230, 118, 0.3);
         }
 
-        /* --- Sections --- */
+        /* --- MAIN CONTENT AREA --- */
         main {
             flex: 1;
-            padding: 1rem;
-            max-width: 1200px;
-            margin: 0 auto;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        section {
-            display: none;
-            animation: fadeIn 0.5s;
-        }
-
-        section.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* --- Cards & Help --- */
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            overflow-y: auto;
+            padding: 20px;
             position: relative;
         }
 
-        .help-icon {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: var(--accent-color);
-            color: #000;
+        .page {
+            display: none; /* Hidden by default */
+            max-width: 800px;
+            margin: 0 auto;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .page.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: 0; } }
+
+        /* --- CARDS & PANELS --- */
+        .panel {
+            background: var(--panel-color);
+            border: 1px solid #333;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .help-btn {
+            background: #333;
+            color: var(--accent);
+            border: 1px solid var(--accent);
             width: 24px;
             height: 24px;
             border-radius: 50%;
             text-align: center;
-            line-height: 24px;
+            line-height: 22px;
             font-weight: bold;
             cursor: pointer;
-            z-index: 10;
+            font-size: 14px;
         }
 
-        .help-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 2000;
+        /* --- SENSOR GRID --- */
+        .readings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .reading-box {
+            background: #111;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #333;
+        }
+
+        .reading-val { font-size: 1.5rem; color: var(--accent); margin: 5px 0; }
+        .reading-label { font-size: 0.8rem; color: #888; }
+
+        /* --- INPUTS --- */
+        .input-group { margin-bottom: 15px; }
+        label { display: block; color: #aaa; margin-bottom: 5px; font-size: 0.9rem; }
+        input[type="number"] {
+            width: 100%;
+            background: #111;
+            border: 1px solid #444;
+            color: white;
+            padding: 10px;
+            font-family: inherit;
+        }
+        input:focus { outline: none; border-color: var(--accent); }
+
+        .action-btn {
+            width: 100%;
+            background: var(--accent);
+            color: black;
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .action-btn:active { transform: scale(0.98); }
+
+        /* --- CAMERA STYLES --- */
+        .cam-wrapper {
+            width: 100%;
+            background: #000;
+            overflow: hidden;
+            display: flex;
             justify-content: center;
             align-items: center;
-        }
-        
-        .help-content {
-            background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 10px;
-            max-width: 80%;
-            border: 1px solid var(--accent-color);
-        }
-
-        /* --- Dashboard --- */
-        .sensor-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-        }
-
-        .sensor-box {
-            background: #2a2a2a;
-            padding: 1rem;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .sensor-value {
-            font-size: 1.5rem;
-            color: var(--accent-color);
-            font-weight: bold;
-        }
-
-        /* --- Thresholds --- */
-        .threshold-group {
-            margin-bottom: 1rem;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .threshold-group label {
-            margin-bottom: 0.5rem;
-            color: #aaa;
-        }
-
-        .threshold-group input {
-            background: #333;
-            border: 1px solid #555;
-            color: white;
-            padding: 0.8rem;
-            border-radius: 5px;
-        }
-
-        .save-btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 1rem;
-            width: 100%;
-            font-size: 1.1rem;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-top: 1rem;
-        }
-
-        /* --- Camera --- */
-        .camera-container {
+            border: 2px solid #333;
             position: relative;
-            width: 100%;
-            border-radius: 10px;
-            overflow: hidden;
-            background: #000;
-            text-align: center;
         }
 
-        /* CORRECTED: Camera feed inverted as requested */
-        #camera-feed {
+        /* ROTATED AND INVERTED AS REQUESTED */
+        #video-feed {
             width: 100%;
-            max-width: 640px;
             height: auto;
-            transform: rotate(180deg); /* Physical camera is upside down */
-            transition: all 0.5s ease;
+            transform: rotate(180deg); /* Physical fix */
+            transition: all 0.3s ease;
             cursor: zoom-in;
-            display: block;
-            margin: 0 auto;
         }
 
-        /* Fullscreen Video Mode */
-        #camera-feed.enlarged {
+        /* EXPANDED MODE */
+        #video-feed.expanded {
             position: fixed;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             width: 100vw;
             height: 100vh;
-            max-width: none;
-            z-index: 5000;
+            z-index: 9999;
             object-fit: contain;
-            background: #000;
+            background: black;
+            transform: rotate(180deg);
             cursor: zoom-out;
-            transform: rotate(180deg); /* Maintain rotation */
         }
 
-        /* --- Minigame --- */
-        #game-container {
+        /* --- MINIGAME STYLES --- */
+        #game-wrapper {
             position: relative;
             width: 100%;
             height: 400px;
             background: #111;
-            border: 2px solid var(--accent-color);
-            border-radius: 10px;
+            border: 2px solid var(--accent);
             overflow: hidden;
+        }
+
+        canvas { display: block; width: 100%; height: 100%; }
+
+        .game-ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* Let clicks pass through to canvas/buttons */
             display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+        }
+
+        .game-header { display: flex; justify-content: space-between; width: 100%; pointer-events: auto; }
+        
+        .score-board { background: rgba(0,0,0,0.7); padding: 5px 10px; border: 1px solid var(--accent); }
+
+        .pause-btn {
+            pointer-events: auto;
+            background: #333;
+            border: 1px solid white;
+            color: white;
+            padding: 5px 15px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .overlay-msg {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0,0,0,0.85);
+            padding: 20px;
+            border: 1px solid var(--accent);
+            pointer-events: auto;
+        }
+
+        /* --- STATUS BAR --- */
+        footer {
+            background: #111;
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            text-align: right;
+            border-top: 1px solid #333;
+            color: #555;
+        }
+
+        /* --- HELP MODAL --- */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 5000;
             justify-content: center;
             align-items: center;
         }
-
-        canvas {
-            background: #000;
-            /* Reduced dizziness: static dark background instead of scrolling starfield if preferred */
+        .modal-content {
+            background: var(--panel-color);
+            padding: 20px;
+            max-width: 90%;
+            width: 400px;
+            border: 1px solid var(--accent);
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
-
-        .game-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            color: white;
-            pointer-events: none;
-        }
-
-        .game-ui {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-        }
-        
-        .game-btn {
-            pointer-events: auto;
-            background: rgba(255,255,255,0.2);
-            border: 1px solid white;
-            color: white;
-            padding: 5px 10px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        /* --- Status Bar --- */
-        #status-bar {
-            background: #333;
-            padding: 0.5rem;
-            text-align: center;
-            font-size: 0.8rem;
-            color: #888;
-        }
-        
-        .error-msg { color: var(--danger); }
-        .success-msg { color: var(--accent-color); }
-
     </style>
 </head>
 <body>
 
-    <nav>
-        <button onclick="showSection('dashboard')" class="active">Dashboard</button>
-        <button onclick="showSection('thresholds')">Thresholds</button>
-        <button onclick="showSection('camera')">Camera</button>
-        <button onclick="showSection('minigame')">Minigame</button>
-    </nav>
+    <header>
+        <h1>BioDome v1.2</h1>
+        <nav>
+            <button class="nav-btn active" onclick="navTo('home')">HOME</button>
+            <button class="nav-btn" onclick="navTo('config')">CONFIG</button>
+            <button class="nav-btn" onclick="navTo('cam')">CAM</button>
+            <button class="nav-btn" onclick="navTo('game')">GAME</button>
+        </nav>
+    </header>
 
     <main>
-        <section id="dashboard" class="active">
-            <div class="card">
-                <div class="help-icon" onclick="openHelp('dash')">?</div>
-                <h2>Live Status</h2>
-                <div class="sensor-grid">
-                    <div class="sensor-box">
-                        <div>Temperature</div>
-                        <div class="sensor-value"><span id="val-temp">--</span>°C</div>
+        <div id="home" class="page active">
+            <div class="panel">
+                <div class="panel-header">
+                    <span>SENSOR ARRAY</span>
+                    <div class="help-btn" onclick="showHelp('home')">?</div>
+                </div>
+                <div class="readings-grid">
+                    <div class="reading-box">
+                        <div class="reading-label">TEMP (°C)</div>
+                        <div class="reading-val" id="disp-temp">--</div>
                     </div>
-                    <div class="sensor-box">
-                        <div>Humidity</div>
-                        <div class="sensor-value"><span id="val-hum">--</span>%</div>
+                    <div class="reading-box">
+                        <div class="reading-label">HUMIDITY (%)</div>
+                        <div class="reading-val" id="disp-hum">--</div>
                     </div>
-                    <div class="sensor-box">
-                        <div>Soil Moisture</div>
-                        <div class="sensor-value"><span id="val-soil">--</span>%</div>
+                    <div class="reading-box">
+                        <div class="reading-label">SOIL (%)</div>
+                        <div class="reading-val" id="disp-soil">--</div>
                     </div>
-                    <div class="sensor-box">
-                        <div>Nitrogen (N)</div>
-                        <div class="sensor-value"><span id="val-n">--</span> mg/kg</div>
+                    <div class="reading-box">
+                        <div class="reading-label">NITROGEN</div>
+                        <div class="reading-val" id="disp-n">--</div>
                     </div>
-                    <div class="sensor-box">
-                        <div>Phosphorus (P)</div>
-                        <div class="sensor-value"><span id="val-p">--</span> mg/kg</div>
+                    <div class="reading-box">
+                        <div class="reading-label">PHOSPHORUS</div>
+                        <div class="reading-val" id="disp-p">--</div>
                     </div>
-                    <div class="sensor-box">
-                        <div>Potassium (K)</div>
-                        <div class="sensor-value"><span id="val-k">--</span> mg/kg</div>
+                    <div class="reading-box">
+                        <div class="reading-label">POTASSIUM</div>
+                        <div class="reading-val" id="disp-k">--</div>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <section id="thresholds">
-            <div class="card">
-                <div class="help-icon" onclick="openHelp('thresh')">?</div>
-                <h2>System Automation</h2>
-                <p style="color:#888; font-size: 0.9rem;">Set triggers for automated care. (PINs hidden for security)</p>
-                
-                <div class="threshold-group">
-                    <label>Min Temperature (°C)</label>
+        <div id="config" class="page">
+            <div class="panel">
+                <div class="panel-header">
+                    <span>AUTOMATION THRESHOLDS</span>
+                    <div class="help-btn" onclick="showHelp('config')">?</div>
+                </div>
+                <p style="font-size: 0.8rem; color: #888; margin-bottom: 20px;">
+                    Set the minimum values. If sensors drop below these numbers, the system will auto-correct.
+                </p>
+
+                <div class="input-group">
+                    <label>Min Temp (°C)</label>
                     <input type="number" id="in-temp" placeholder="24">
                 </div>
-                <div class="threshold-group">
+                <div class="input-group">
                     <label>Min Humidity (%)</label>
                     <input type="number" id="in-hum" placeholder="60">
                 </div>
-                <div class="threshold-group">
+                <div class="input-group">
                     <label>Min Soil Moisture (%)</label>
                     <input type="number" id="in-soil" placeholder="40">
                 </div>
-                
-                <div class="threshold-group">
-                    <label>Min Nitrogen (N)</label>
+
+                <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+
+                <div class="input-group">
+                    <label>Min Nitrogen (mg/kg)</label>
                     <input type="number" id="in-n" placeholder="100">
                 </div>
-                <div class="threshold-group">
-                    <label>Min Phosphorus (P)</label>
+                <div class="input-group">
+                    <label>Min Phosphorus (mg/kg)</label>
                     <input type="number" id="in-p" placeholder="50">
                 </div>
-                <div class="threshold-group">
-                    <label>Min Potassium (K)</label>
+                <div class="input-group">
+                    <label>Min Potassium (mg/kg)</label>
                     <input type="number" id="in-k" placeholder="100">
                 </div>
 
-                <button class="save-btn" onclick="saveSettings()">Update System</button>
+                <button class="action-btn" onclick="saveConfig()">UPLOAD SETTINGS</button>
+                <div id="config-msg" style="text-align: center; margin-top: 10px; font-size: 0.8rem;"></div>
             </div>
-        </section>
+        </div>
 
-        <section id="camera">
-            <div class="card">
-                <div class="help-icon" onclick="openHelp('cam')">?</div>
-                <h2>Live Feed</h2>
-                <div class="camera-container">
-                    <img id="camera-feed" src="https://via.placeholder.com/640x480?text=Connecting+Camera..." alt="Camera Feed">
+        <div id="cam" class="page">
+            <div class="panel">
+                <div class="panel-header">
+                    <span>INTERNAL FEED</span>
+                    <div class="help-btn" onclick="showHelp('cam')">?</div>
                 </div>
-                <p style="text-align:center; font-size:0.8rem; margin-top:10px;">Double-tap video to enlarge.</p>
+                <div class="cam-wrapper">
+                    <img id="video-feed" src="" alt="Camera Offline" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMjIyIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZpbGw9IiM1NTUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5PIFNJR05BTDwvdGV4dD48L3N2Zz4='">
+                </div>
+                <p style="text-align: center; font-size: 0.75rem; color: #666; margin-top: 10px;">
+                    Double-tap video to enlarge. Feed rotated 180° for physical mount correction.
+                </p>
             </div>
-        </section>
+        </div>
 
-        <section id="minigame">
-            <div class="card" style="padding: 0; border:none; background:transparent;">
-                <div id="game-container">
-                    <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <div id="game" class="page">
+            <div class="panel" style="padding: 0; border: none;">
+                <div id="game-wrapper">
+                    <canvas id="cvs"></canvas>
                     
-                    <div class="game-ui">
-                        <span id="score-display">Score: 0</span>
-                        <button class="game-btn" onclick="togglePause()">Pause</button>
+                    <div class="game-ui-layer">
+                        <div class="game-header">
+                            <span class="score-board" id="score">000000</span>
+                            <button class="pause-btn" onclick="togglePause()">PAUSE</button>
+                        </div>
                     </div>
 
-                    <div id="game-overlay" class="game-overlay">
-                        <h2 id="overlay-title">BIODOME DEFENDER</h2>
-                        <p id="overlay-sub">Press Space or Tap to Start</p>
+                    <div id="game-overlay" class="overlay-msg">
+                        <h2 style="margin: 0 0 10px 0; color: var(--accent);">DEFEND THE DOME</h2>
+                        <p id="game-subtext" style="font-size: 0.8rem; color: #ccc;">WASD / ARROWS to Move<br>SPACE to Shoot</p>
+                        <button class="action-btn" style="margin-top: 15px;" onclick="startGame()">INITIATE SYSTEM</button>
                     </div>
                 </div>
-                <p style="text-align:center; color:#666; font-size:0.8rem; margin-top: 5px;">Arrows/WASD to move. Space to shoot.</p>
             </div>
-        </section>
+        </div>
+
     </main>
 
-    <div id="status-bar">System Status: Initializing...</div>
+    <footer>
+        STATUS: <span id="status-txt">Waiting for connection...</span>
+    </footer>
 
-    <div id="help-modal" class="help-modal" onclick="closeHelp()">
-        <div class="help-content" onclick="event.stopPropagation()">
-            <h3 id="help-title">Info</h3>
-            <p id="help-text">...</p>
-            <button class="game-btn" style="background:var(--primary-color); width:100%; margin-top:1rem;" onclick="closeHelp()">Close</button>
+    <div id="help-modal" class="modal-backdrop" onclick="this.style.display='none'">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 style="color:var(--accent); margin-top:0;" id="help-title">Info</h3>
+            <p id="help-body" style="line-height: 1.5; font-size: 0.9rem;">...</p>
+            <button class="action-btn" onclick="document.getElementById('help-modal').style.display='none'">CLOSE</button>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        // REPLACE THIS IP WITH YOUR ARDUINO'S IP ADDRESS
-        const ARDUINO_IP = "http://192.168.4.1"; 
-        
-        // --- FAILSAFE STATE MANAGEMENT ---
-        const state = {
-            sensors: { temp: 0, hum: 0, soil: 0, n: 0, p: 0, k: 0 },
-            connection: false,
-            errorCount: 0,
-            lastUpdate: 0
-        };
+        /**
+         * BIODOME CONTROLLER V1.2
+         * - Redesigned Input Handling for Bug-Free Movement
+         * - Added Security Validation (No PINs, Type Checks)
+         * - Stabilized Graphics for Dizziness Prevention
+         */
 
-        // --- NAVIGATION ---
-        function showSection(id) {
-            document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+        // --- GLOBAL CONFIGURATION ---
+        // Change this to your ESP32/Arduino IP Address
+        const ARDUINO_URL = "http://192.168.4.1"; 
+
+        // --- NAVIGATION LOGIC ---
+        function navTo(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            // Deactivate nav buttons
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             
-            // Highlight nav button
-            const btnIndex = ['dashboard','thresholds','camera','minigame'].indexOf(id);
-            if(btnIndex >= 0) document.querySelectorAll('nav button')[btnIndex].classList.add('active');
+            // Activate selected
+            document.getElementById(pageId).classList.add('active');
+            
+            // Find button by index mapping (Home=0, Config=1, Cam=2, Game=3)
+            const map = { 'home': 0, 'config': 1, 'cam': 2, 'game': 3 };
+            document.querySelectorAll('.nav-btn')[map[pageId]].classList.add('active');
 
-            if(id === 'minigame') {
-                if(!gameLoopId && !game.gameOver) requestAnimationFrame(gameLoop);
-            } else {
-                // Ideally pause game when leaving tab to save resources
-                if(!game.paused && !game.gameOver) togglePause();
+            // Game Logic: Auto-pause if leaving game tab
+            if (pageId !== 'game' && game.state === 'PLAYING') {
+                togglePause();
             }
         }
 
         // --- HELP SYSTEM ---
         const helpData = {
-            'dash': { title: 'Dashboard', text: 'Real-time readings from the Biodome sensors. Data refreshes automatically.' },
-            'thresh': { title: 'Thresholds', text: 'Set minimum values for automation. If sensors drop below these numbers, the Arduino will trigger pumps/lights.' },
-            'cam': { title: 'Camera', text: 'Live view inside the greenhouse. Double-click the video to view fullscreen.' }
+            'home': { t: 'Sensor Dashboard', b: 'Displays real-time telemetry from the Biodome. Data refreshes automatically. If values show "--", check the Arduino connection.' },
+            'config': { t: 'System Thresholds', b: 'Input the minimum safe values for your plants. If sensors read below these numbers, the Arduino will activate pumps or heaters automatically. ' },
+            'cam': { t: 'Visual Feed', b: 'Live stream from inside the dome. Double-click the image to enter full-screen mode for detailed inspection.' }
         };
 
-        function openHelp(key) {
-            const data = helpData[key];
-            document.getElementById('help-title').innerText = data.title;
-            document.getElementById('help-text').innerText = data.text;
+        function showHelp(key) {
+            document.getElementById('help-title').innerText = helpData[key].t;
+            document.getElementById('help-body').innerText = helpData[key].b;
             document.getElementById('help-modal').style.display = 'flex';
         }
 
-        function closeHelp() {
-            document.getElementById('help-modal').style.display = 'none';
-        }
+        // --- DATA & FAILSAFES ---
+        const state = {
+            connected: false,
+            failCount: 0
+        };
 
-        // --- COMMUNICATION & FAILSAFES ---
-        function updateStatus(msg, type) {
-            const el = document.getElementById('status-bar');
+        function updateStatus(msg, isError = false) {
+            const el = document.getElementById('status-txt');
             el.innerText = msg;
-            el.className = type === 'error' ? 'error-msg' : (type === 'success' ? 'success-msg' : '');
+            el.style.color = isError ? '#ff5252' : '#00e676';
         }
 
+        // Polling function with Failsafe Timeout
         async function fetchData() {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+
             try {
-                // Failsafe: Timeout to prevent hanging
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-                const response = await fetch(`${ARDUINO_IP}/data`, { signal: controller.signal });
+                const res = await fetch(`${ARDUINO_URL}/status`, { signal: controller.signal });
                 clearTimeout(timeoutId);
-
-                if (!response.ok) throw new Error("Server response not OK");
-
-                const data = await response.json();
                 
-                // Update State
-                state.sensors = data;
-                state.connection = true;
-                state.errorCount = 0;
-                state.lastUpdate = Date.now();
-
-                // Update UI
-                document.getElementById('val-temp').innerText = data.temp || '--';
-                document.getElementById('val-hum').innerText = data.hum || '--';
-                document.getElementById('val-soil').innerText = data.soil || '--';
-                document.getElementById('val-n').innerText = data.n || '--';
-                document.getElementById('val-p').innerText = data.p || '--';
-                document.getElementById('val-k').innerText = data.k || '--';
-
-                updateStatus(`Connected. Last sync: ${new Date().toLocaleTimeString()}`, 'success');
-
-            } catch (error) {
-                state.connection = false;
-                state.errorCount++;
-                console.error("Fetch error:", error);
+                if (!res.ok) throw new Error("HTTP Error");
                 
-                // Adaptive polling: slow down if errors persist to prevent flooding
-                let msg = "Connection lost. Retrying...";
-                if (state.errorCount > 5) msg = "Device offline. Check power/network.";
-                updateStatus(msg, 'error');
+                const data = await res.json();
+                
+                // Populate Dashboard with validation checks
+                // Using helper to prevent "undefined" or "NaN" from showing
+                const safeVal = (v) => (v !== undefined && v !== null && !isNaN(v)) ? v : '--';
+
+                document.getElementById('disp-temp').innerText = safeVal(data.temperature);
+                document.getElementById('disp-hum').innerText = safeVal(data.humidity);
+                document.getElementById('disp-soil').innerText = safeVal(data.soilMoisture);
+                document.getElementById('disp-n').innerText = safeVal(data.n);
+                document.getElementById('disp-p').innerText = safeVal(data.p);
+                document.getElementById('disp-k').innerText = safeVal(data.k);
+
+                state.connected = true;
+                state.failCount = 0;
+                updateStatus("SYSTEM ONLINE");
+
+            } catch (err) {
+                state.failCount++;
+                // Progressive backoff messaging
+                if (state.failCount > 5) {
+                    updateStatus("CONNECTION LOST - CHECK DEVICE", true);
+                    state.connected = false;
+                }
             }
         }
 
-        async function saveSettings() {
-            // Validation Failsafe
-            const inputs = ['in-temp', 'in-hum', 'in-soil', 'in-n', 'in-p', 'in-k'];
-            const payload = {};
-            let valid = true;
+        // Auto-poll every 2 seconds
+        setInterval(fetchData, 2000);
 
-            inputs.forEach(id => {
-                const val = parseFloat(document.getElementById(id).value);
-                if (isNaN(val) || val < 0) valid = false;
+        // Save Config with Validation (Human Error Compensation)
+        async function saveConfig() {
+            const ids = ['in-temp', 'in-hum', 'in-soil', 'in-n', 'in-p', 'in-k'];
+            const payload = {};
+            let hasError = false;
+
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                let val = parseFloat(el.value);
+                
+                // HUMAN ERROR FIX: If empty or invalid, set to 0 or safe default
+                if (isNaN(val) || val < 0) {
+                    val = 0; 
+                    el.value = 0; // Visual feedback to user
+                    hasError = true; // Flag for notification
+                }
                 payload[id.replace('in-', '')] = val;
             });
 
-            if (!valid) {
-                alert("Please enter valid positive numbers for all fields.");
-                return;
+            if(hasError) {
+                alert("Some invalid values were detected and reset to 0. Please review before confirming.");
+                return; 
             }
 
             try {
-                updateStatus("Sending settings...", "");
-                const response = await fetch(`${ARDUINO_IP}/settings`, {
+                updateStatus("UPLOADING CONFIG...", false);
+                await fetch(`${ARDUINO_URL}/set`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
-                if (response.ok) {
-                    updateStatus("Settings Saved Successfully", "success");
-                    alert("Settings updated!");
-                } else {
-                    throw new Error("Save failed");
-                }
+                document.getElementById('config-msg').innerText = "SETTINGS SAVED SUCCESSFULLY";
+                document.getElementById('config-msg').style.color = "var(--accent)";
+                setTimeout(() => document.getElementById('config-msg').innerText = "", 3000);
             } catch (e) {
-                updateStatus("Failed to save settings.", "error");
-                alert("Error saving settings. Check connection.");
+                alert("Failed to send settings to Arduino.");
             }
         }
 
-        // Poll data every 2 seconds
-        setInterval(fetchData, 2000);
+        // --- CAMERA FEATURES ---
+        const videoEl = document.getElementById('video-feed');
+        
+        // 1. Set source (Standard MJPEG stream path usually)
+        videoEl.src = `${ARDUINO_URL}/stream`; 
 
-        // --- CAMERA LOGIC ---
-        const camFeed = document.getElementById('camera-feed');
-        
-        // Use a dummy stream update or MJPEG stream if available
-        // For compatibility, we set the source. If it's a static image refresh:
-        // setInterval(() => camFeed.src = ARDUINO_IP + "/cam?t=" + new Date().getTime(), 1000);
-        // Assuming MJPEG stream for smoother video:
-        camFeed.src = `${ARDUINO_IP}/stream`; 
-        
-        // Double Click Enlarge
-        camFeed.addEventListener('dblclick', () => {
-            camFeed.classList.toggle('enlarged');
+        // 2. Double Click Enlarge
+        videoEl.addEventListener('dblclick', () => {
+            videoEl.classList.toggle('expanded');
         });
-        
-        // Touch support for double tap
+
+        // 3. Touch Double Tap Support
         let lastTap = 0;
-        camFeed.addEventListener('touchend', (e) => {
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
-            if (tapLength < 500 && tapLength > 0) {
-                camFeed.classList.toggle('enlarged');
+        videoEl.addEventListener('touchend', (e) => {
+            const now = new Date().getTime();
+            if (now - lastTap < 300) {
+                videoEl.classList.toggle('expanded');
                 e.preventDefault();
             }
-            lastTap = currentTime;
+            lastTap = now;
         });
 
-        // --- MINIGAME LOGIC (Version 5 - Enhanced) ---
-        const canvas = document.getElementById('gameCanvas');
+        // --- MINIGAME ENGINE V1.2 (Rewritten) ---
+        const canvas = document.getElementById('cvs');
         const ctx = canvas.getContext('2d');
-        let gameLoopId;
+        let animationFrameId;
+
+        // Resize handling
+        function fitCanvas() {
+            canvas.width = document.getElementById('game-wrapper').offsetWidth;
+            canvas.height = document.getElementById('game-wrapper').offsetHeight;
+        }
+        window.addEventListener('resize', fitCanvas);
+        fitCanvas();
+
+        // MOVEMENT FIX: Boolean Map
+        const input = { u: false, d: false, l: false, r: false, fire: false };
+
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if(k === 'w' || k === 'arrowup') input.u = true;
+            if(k === 's' || k === 'arrowdown') input.d = true;
+            if(k === 'a' || k === 'arrowleft') input.l = true;
+            if(k === 'd' || k === 'arrowright') input.r = true;
+            if(k === ' ') input.fire = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if(k === 'w' || k === 'arrowup') input.u = false;
+            if(k === 's' || k === 'arrowdown') input.d = false;
+            if(k === 'a' || k === 'arrowleft') input.l = false;
+            if(k === 'd' || k === 'arrowright') input.r = false;
+            if(k === ' ') input.fire = false;
+        });
 
         const game = {
-            state: 'START', // START, INTRO, PLAY, GAMEOVER
-            paused: false,
-            width: canvas.width,
-            height: canvas.height,
+            state: 'MENU', // MENU, PLAYING, PAUSED, BOSSWARN, BOSS, GAMEOVER
             score: 0,
-            level: 1
+            frame: 0,
+            player: { x: 50, y: 200, w: 30, h: 30, speed: 5, hp: 3 },
+            bullets: [],
+            enemies: [],
+            particles: [],
+            boss: null
         };
 
-        // Movement Fix: Use a keys object to handle multiple key presses smoothly
-        const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, a: false, s: false, d: false, " ": false };
-
-        window.addEventListener('keydown', e => {
-            if(keys.hasOwnProperty(e.key) || keys.hasOwnProperty(e.key.toLowerCase())) {
-                keys[e.key] = true;
-                if(e.key === " " && game.state === 'START') startGame();
-                if(e.key === " " && game.state === 'GAMEOVER') startGame();
-            }
-        });
-
-        window.addEventListener('keyup', e => {
-            if(keys.hasOwnProperty(e.key)) keys[e.key] = false;
-        });
-
-        // Entities
-        const player = { x: 300, y: 350, w: 20, h: 20, speed: 5, color: '#00ff00' };
-        let bullets = [];
-        let enemies = [];
-        let particles = [];
-        let boss = null;
+        function resetGame() {
+            game.score = 0;
+            game.player.hp = 3;
+            game.bullets = [];
+            game.enemies = [];
+            game.particles = [];
+            game.boss = null;
+            game.frame = 0;
+            document.getElementById('score').innerText = "000000";
+        }
 
         function startGame() {
-            game.score = 0;
-            game.level = 1;
-            player.x = 300; 
-            player.y = 350;
-            bullets = [];
-            enemies = [];
-            particles = [];
-            boss = null;
-            game.state = 'PLAY';
-            game.paused = false;
+            resetGame();
+            game.state = 'PLAYING';
             document.getElementById('game-overlay').style.display = 'none';
-            document.getElementById('score-display').innerText = 'Score: 0';
-            requestAnimationFrame(gameLoop);
+            loop();
         }
 
         function togglePause() {
-            if(game.state !== 'PLAY' && game.state !== 'INTRO') return;
-            game.paused = !game.paused;
-            document.getElementById('overlay-title').innerText = game.paused ? "PAUSED" : "";
-            document.getElementById('overlay-sub').innerText = game.paused ? "Click Pause to Resume" : "";
-            document.getElementById('game-overlay').style.display = game.paused ? "block" : "none";
-        }
-
-        // Draw Complex Shapes (Simple Primitives)
-        function drawPlayer(ctx, x, y) {
-            ctx.fillStyle = player.color;
-            ctx.beginPath();
-            ctx.moveTo(x, y - 15);
-            ctx.lineTo(x - 10, y + 10);
-            ctx.lineTo(x + 10, y + 10);
-            ctx.closePath();
-            ctx.fill();
-            // Engine flame
-            if(Math.random() > 0.5) {
-                ctx.fillStyle = 'orange';
-                ctx.beginPath();
-                ctx.moveTo(x - 5, y + 10);
-                ctx.lineTo(x, y + 18);
-                ctx.lineTo(x + 5, y + 10);
-                ctx.fill();
+            if (game.state === 'PLAYING' || game.state === 'BOSS') {
+                game.state = 'PAUSED';
+                document.getElementById('game-overlay').style.display = 'block';
+                document.querySelector('#game-overlay h2').innerText = "SYSTEM PAUSED";
+                document.querySelector('#game-overlay button').innerText = "RESUME";
+                document.querySelector('#game-overlay button').onclick = togglePause;
+            } else if (game.state === 'PAUSED') {
+                game.state = (game.boss) ? 'BOSS' : 'PLAYING';
+                document.getElementById('game-overlay').style.display = 'none';
+                loop();
             }
         }
 
-        function drawEnemy(ctx, e) {
-            ctx.save();
-            ctx.translate(e.x, e.y);
-            ctx.rotate(e.angle); // Rotate for complexity
-            ctx.fillStyle = e.type === 1 ? '#ff4444' : '#ffbb33';
-            ctx.fillRect(-e.w/2, -e.h/2, e.w, e.h);
-            // Detail
-            ctx.fillStyle = 'black';
-            ctx.fillRect(-e.w/4, -e.h/4, e.w/2, e.h/2);
-            ctx.restore();
+        function spawnEnemy() {
+            // Failsafe: Cap max enemies to prevent browser crash
+            if(game.enemies.length > 20) return;
+
+            game.enemies.push({
+                x: canvas.width + 20,
+                y: Math.random() * (canvas.height - 40) + 20,
+                w: 25, h: 25,
+                vx: -(Math.random() * 3 + 2), // Random speed
+                hp: 1,
+                type: 'drone'
+            });
         }
 
-        function drawBoss(ctx, b) {
-            ctx.save();
-            ctx.translate(b.x, b.y);
-            // Intro animation effect
-            if (game.state === 'INTRO') {
-               ctx.scale(b.introScale, b.introScale);
-            }
-            
-            // Complex Hexagon Boss
-            ctx.fillStyle = '#9c27b0';
-            ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-                ctx.lineTo(50 * Math.cos(i * 2 * Math.PI / 6), 50 * Math.sin(i * 2 * Math.PI / 6));
-            }
-            ctx.closePath();
-            ctx.fill();
-            
-            // Rotating Shield
-            ctx.rotate(Date.now() / 500);
-            ctx.strokeStyle = '#e040fb';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.arc(0, 0, 70, 0, Math.PI * 1.5);
-            ctx.stroke();
-            
-            ctx.restore();
+        function initBoss() {
+            game.state = 'BOSSWARN';
+            // Simple warning animation logic could go here
+            setTimeout(() => {
+                game.state = 'BOSS';
+                game.boss = {
+                    x: canvas.width + 100,
+                    y: canvas.height / 2,
+                    w: 80, h: 80,
+                    hp: 50,
+                    dir: 1
+                };
+            }, 2000);
         }
 
         function update() {
-            if(game.paused) return;
+            if (game.state === 'PAUSED' || game.state === 'GAMEOVER') return;
 
-            // Player Movement
-            if ((keys.ArrowLeft || keys.a) && player.x > 10) player.x -= player.speed;
-            if ((keys.ArrowRight || keys.d) && player.x < game.width - 10) player.x += player.speed;
-            if ((keys.ArrowUp || keys.w) && player.y > 10) player.y -= player.speed;
-            if ((keys.ArrowDown || keys.s) && player.y < game.height - 10) player.y += player.speed;
+            // Player Move (with Screen Boundaries)
+            if (input.u && game.player.y > 0) game.player.y -= game.player.speed;
+            if (input.d && game.player.y < canvas.height - game.player.h) game.player.y += game.player.speed;
+            if (input.l && game.player.x > 0) game.player.x -= game.player.speed;
+            if (input.r && game.player.x < canvas.width - game.player.w) game.player.x += game.player.speed;
 
-            // Shooting
-            if (keys[" "]) {
-                if(bullets.length === 0 || bullets[bullets.length-1].y < player.y - 15) { // Fire rate limit
-                    bullets.push({ x: player.x, y: player.y - 15, w: 4, h: 10, c: '#ffff00' });
-                }
+            // Fire (Rate limited)
+            if (input.fire && game.frame % 10 === 0) {
+                game.bullets.push({ x: game.player.x + 20, y: game.player.y + 10, w: 10, h: 4, vx: 10 });
             }
 
-            // Bullets
-            for(let i=bullets.length-1; i>=0; i--) {
-                bullets[i].y -= 10;
-                if(bullets[i].y < 0) bullets.splice(i, 1);
-            }
+            // Update Bullets
+            game.bullets.forEach((b, i) => {
+                b.x += b.vx;
+                if (b.x > canvas.width) game.bullets.splice(i, 1);
+            });
 
             // Boss Logic
-            if(game.score > 500 && !boss) {
-                game.state = 'INTRO';
-                boss = { x: game.width/2, y: -100, hp: 50, introScale: 0.1, targetY: 100 };
-            }
-
-            if(game.state === 'INTRO') {
-                boss.y += (boss.targetY - boss.y) * 0.05;
-                boss.introScale += (1 - boss.introScale) * 0.05;
-                if(Math.abs(boss.y - boss.targetY) < 1) {
-                    game.state = 'PLAY'; // Boss fight starts
-                }
-                return; // Stop other updates during intro
-            }
-
-            if(boss) {
-                boss.x += Math.sin(Date.now()/500) * 2;
+            if (game.boss) {
+                // Intro move
+                if (game.boss.x > canvas.width - 150) game.boss.x -= 2;
+                // Bobbing move
+                game.boss.y += Math.sin(game.frame / 20) * 2;
+                
                 // Boss Collision
-                bullets.forEach((b, bi) => {
-                    let dx = b.x - boss.x;
-                    let dy = b.y - boss.y;
-                    if(Math.sqrt(dx*dx + dy*dy) < 50) {
-                        boss.hp--;
-                        bullets.splice(bi, 1);
-                        particles.push({x: b.x, y: b.y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, life: 20});
-                        if(boss.hp <= 0) {
-                            boss = null;
-                            game.score += 1000; // Bonus
-                        }
+                game.bullets.forEach((b, i) => {
+                    if (b.x < game.boss.x + game.boss.w && b.x + b.w > game.boss.x &&
+                        b.y < game.boss.y + game.boss.h && b.y + b.h > game.boss.y) {
+                        game.boss.hp--;
+                        game.bullets.splice(i, 1);
+                        // Hit particle
+                        game.particles.push({x: b.x, y: b.y, life: 10, color: '#fff'});
                     }
                 });
+
+                if (game.boss.hp <= 0) {
+                    game.score += 5000;
+                    game.boss = null;
+                    game.state = 'PLAYING'; // Loop back to normal
+                }
             } else {
-                // Spawning Enemies
-                if(Math.random() < 0.02 + (game.score/10000)) {
-                    enemies.push({ 
-                        x: Math.random() * (game.width - 20) + 10, 
-                        y: -20, 
-                        w: 20, 
-                        h: 20, 
-                        type: Math.random()>0.8?2:1,
-                        angle: 0 
-                    });
+                // Normal Enemy Spawning logic
+                if (game.frame % 60 === 0) spawnEnemy();
+                
+                // Trigger Boss
+                if (game.score > 2000 && !game.boss && game.state !== 'BOSSWARN') {
+                   initBoss(); 
                 }
             }
 
-            // Enemies Update
-            for(let i=enemies.length-1; i>=0; i--) {
-                let e = enemies[i];
-                e.y += 3;
-                e.angle += 0.1;
+            // Enemy Logic
+            game.enemies.forEach((e, i) => {
+                e.x += e.vx;
 
-                if(e.y > game.height) enemies.splice(i, 1);
-
-                // Collision Player
-                if (Math.abs(e.x - player.x) < 20 && Math.abs(e.y - player.y) < 20) {
+                // Collision with Player
+                if (e.x < game.player.x + game.player.w && e.x + e.w > game.player.x &&
+                    e.y < game.player.y + game.player.h && e.y + e.h > game.player.y) {
+                    game.state = 'GAMEOVER';
                     endGame();
                 }
 
-                // Collision Bullets
-                for(let j=bullets.length-1; j>=0; j--) {
-                    let b = bullets[j];
-                    if(Math.abs(e.x - b.x) < e.w && Math.abs(e.y - b.y) < e.h) {
-                        enemies.splice(i, 1);
-                        bullets.splice(j, 1);
-                        game.score += 10;
-                        document.getElementById('score-display').innerText = 'Score: ' + game.score;
-                        // Explosion particles
-                        for(let p=0; p<5; p++) {
-                            particles.push({x: e.x, y: e.y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 15});
+                // Collision with Bullets
+                game.bullets.forEach((b, bi) => {
+                    if (b.x < e.x + e.w && b.x + b.w > e.x &&
+                        b.y < e.y + e.h && b.y + b.h > e.y) {
+                        game.enemies.splice(i, 1);
+                        game.bullets.splice(bi, 1);
+                        game.score += 100;
+                        document.getElementById('score').innerText = game.score.toString().padStart(6, '0');
+                        // Particles
+                        for(let k=0; k<5; k++) {
+                           game.particles.push({
+                               x: e.x, y: e.y, 
+                               vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, 
+                               life: 20, color: 'orange'
+                           }); 
                         }
-                        break;
                     }
-                }
-            }
+                });
+
+                if (e.x + e.w < 0) game.enemies.splice(i, 1);
+            });
 
             // Particles
-            for(let i=particles.length-1; i>=0; i--) {
-                let p = particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
+            game.particles.forEach((p, i) => {
+                p.x += p.vx || 0;
+                p.y += p.vy || 0;
                 p.life--;
-                if(p.life <= 0) particles.splice(i, 1);
-            }
+                if(p.life <= 0) game.particles.splice(i, 1);
+            });
+
+            game.frame++;
         }
 
         function draw() {
-            // Background - Clear with slightly transparent black for trail effect (optional, removed for dizziness prevention)
-            ctx.fillStyle = '#000000'; 
-            ctx.fillRect(0, 0, game.width, game.height);
+            // Clear Screen
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Particles
-            ctx.fillStyle = '#ffff00';
-            particles.forEach(p => ctx.fillRect(p.x, p.y, 2, 2));
+            // DIZZINESS FIX: Replaced fast scrolling stars with slow static dust
+            ctx.fillStyle = '#222';
+            for(let i=0; i<20; i++) {
+                // Static background elements
+                ctx.fillRect((i * 50 + game.frame/2) % canvas.width, (i * 30) % canvas.height, 2, 2);
+            }
 
-            if(game.state === 'PLAY' || game.state === 'INTRO') {
-                drawPlayer(ctx, player.x, player.y);
-                bullets.forEach(b => { ctx.fillStyle=b.c; ctx.fillRect(b.x-2, b.y, b.w, b.h); });
-                enemies.forEach(e => drawEnemy(ctx, e));
-                if(boss) drawBoss(ctx, boss);
+            if (game.state === 'PLAYING' || game.state === 'BOSS') {
+                // Complex Player Shape (Triangle + Engine)
+                ctx.fillStyle = '#00e676';
+                ctx.beginPath();
+                ctx.moveTo(game.player.x + 30, game.player.y + 15); // Nose
+                ctx.lineTo(game.player.x, game.player.y);
+                ctx.lineTo(game.player.x + 5, game.player.y + 15);
+                ctx.lineTo(game.player.x, game.player.y + 30);
+                ctx.fill();
+
+                // Bullets
+                ctx.fillStyle = '#ffff00';
+                game.bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+
+                // Complex Enemy Shapes
+                game.enemies.forEach(e => {
+                    ctx.fillStyle = '#ff5252';
+                    // Main body
+                    ctx.fillRect(e.x, e.y, e.w, e.h);
+                    // Detail
+                    ctx.fillStyle = '#8a0f0f';
+                    ctx.fillRect(e.x + 5, e.y + 5, e.w - 10, e.h - 10);
+                });
+
+                // Complex Boss Shape (Hexagon + Core)
+                if (game.boss) {
+                    ctx.fillStyle = '#ab47bc';
+                    const b = game.boss;
+                    ctx.beginPath();
+                    ctx.moveTo(b.x + b.w/2, b.y);
+                    ctx.lineTo(b.x + b.w, b.y + b.h/3);
+                    ctx.lineTo(b.x + b.w, b.y + 2*b.h/3);
+                    ctx.lineTo(b.x + b.w/2, b.y + b.h);
+                    ctx.lineTo(b.x, b.y + 2*b.h/3);
+                    ctx.lineTo(b.x, b.y + b.h/3);
+                    ctx.fill();
+                    
+                    // Core
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(b.x + b.w/2, b.y + b.h/2, 10, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                // Particles
+                game.particles.forEach(p => {
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x, p.y, 3, 3);
+                });
             }
         }
 
         function endGame() {
-            game.state = 'GAMEOVER';
-            document.getElementById('overlay-title').innerText = "GAME OVER";
-            document.getElementById('overlay-sub').innerText = "Final Score: " + game.score + " - Press Space to Retry";
             document.getElementById('game-overlay').style.display = 'block';
+            document.querySelector('#game-overlay h2').innerText = "CRITICAL FAILURE";
+            document.getElementById('game-subtext').innerText = "Final Score: " + game.score;
+            document.querySelector('#game-overlay button').innerText = "REBOOT SYSTEM";
+            document.querySelector('#game-overlay button').onclick = startGame;
         }
 
-        function gameLoop() {
-            update();
-            draw();
-            if(game.state !== 'GAMEOVER' || particles.length > 0) {
-                gameLoopId = requestAnimationFrame(gameLoop);
+        function loop() {
+            if (game.state === 'PLAYING' || game.state === 'BOSS' || game.state === 'BOSSWARN') {
+                update();
+                draw();
+                animationFrameId = requestAnimationFrame(loop);
             }
         }
     </script>
