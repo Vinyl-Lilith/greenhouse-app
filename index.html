@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BioDome OS v4.0 | Synthetos</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>BioCube OS v4.0 | Synthetos</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
-    
     <style>
         /* --- CORE VARIABLES & RESET --- */
         :root {
@@ -67,9 +66,9 @@
         h2 { margin: 0 0 15px 0; color: var(--cyan); font-family: 'Orbitron'; font-size: 1.2rem; border-bottom: 1px solid #333; padding-bottom: 8px; }
         
         .help-btn {
-            position: absolute; top: 15px; right: 15px; width: 24px; height: 24px;
-            border: 1px solid #666; border-radius: 50%; text-align: center; line-height: 22px;
-            color: #aaa; cursor: pointer; font-size: 0.9rem; font-family: 'Orbitron';
+            position: absolute; top: 15px; right: 15px; width: 28px; height: 28px;
+            border: 1px solid #666; border-radius: 50%; text-align: center; line-height: 26px;
+            color: #aaa; cursor: pointer; font-size: 0.95rem; font-family: 'Orbitron';
         }
         .help-btn:hover { color: white; border-color: white; }
 
@@ -86,12 +85,15 @@
         }
         .cam-feed img { 
             width: 100%; height: 100%; object-fit: cover; 
-            transform: rotate(180deg); /* FEATURE 2: Flip Video Only */
+            transform: rotate(180deg); /* rotate image only to correct physical orientation */
         }
         .rec-dot { 
             position: absolute; top: 10px; left: 10px; color: red; font-size: 0.8rem; 
             font-weight: bold; animation: blink 1s infinite; z-index: 10;
+            transform: rotate(0deg); /* ensure upright */
+            background: rgba(0,0,0,0.5); padding: 3px 6px; border-radius: 6px;
         }
+        .cam-feed .sig-off { color: #bbb; background: rgba(255,0,85,0.06); border: 1px solid rgba(255,255,255,0.05); }
         .cam-hint {
             position: absolute; bottom: 5px; right: 10px; font-size: 0.7rem; color: rgba(255,255,255,0.5); pointer-events: none;
         }
@@ -210,10 +212,11 @@
     <div id="cam-modal">
         <div id="cam-close" onclick="closeCamModal()">×</div>
         <img id="cam-modal-img" src="">
+        <div style="position:absolute; top:18px; left:18px; color:red; font-weight:bold; background:rgba(0,0,0,0.4); padding:4px 8px; border-radius:6px;" id="cam-modal-live" hidden>LIVE</div>
     </div>
 
     <div class="status-bar">
-        <div class="brand">BIODOME OS</div>
+        <div class="brand">BIOCUBE OS</div>
         <div class="status-ind">
             <span id="conn-text">OFFLINE</span>
             <div class="dot" id="conn-dot"></div>
@@ -225,8 +228,8 @@
             <div class="card">
                 <div class="help-btn" onclick="showHelp('home')">?</div>
                 <h2>Live Monitoring</h2>
-                <div class="cam-feed" ondblclick="openCamModal()">
-                    <div class="rec-dot">LIVE</div>
+                <div class="cam-feed" ondblclick="openCamModal()" id="cam-feed">
+                    <div class="rec-dot" id="cam-live">NO SIGNAL</div>
                     <img id="cam-img" src="" alt="NO SIGNAL">
                     <div class="cam-hint">Double-tap for Fullscreen</div>
                 </div>
@@ -261,11 +264,11 @@
                 </div>
                 <div id="manual-controls" style="opacity: 0.5; pointer-events: none; transition: 0.3s;">
                     <div class="toggle-row">
-                        <span>Exhaust Fan</span>
+                        <span>Exhaust Fan (humidity-based)</span>
                         <button id="btn-fan" class="btn-toggle" onclick="iot.toggleDevice('exhaust')">OFF</button>
                     </div>
                     <div class="toggle-row">
-                        <span>Peltier Cooling</span>
+                        <span>Peltier Cooling (both fans)</span>
                         <button id="btn-peltier" class="btn-toggle" onclick="iot.toggleDevice('peltier')">OFF</button>
                     </div>
                     <div class="toggle-row">
@@ -285,12 +288,30 @@
                 <div class="help-btn" onclick="showHelp('config')">?</div>
                 <h2>Automation Thresholds</h2>
                 <div class="input-row">
-                    <label>Target Temperature (°C)</label>
-                    <input type="number" id="cfg-temp" placeholder="Controls Cooling & Fan">
+                    <label>Target Temperature (°C) — controls Peltier activation</label>
+                    <input type="number" id="cfg-temp" placeholder="Controls Cooling & Peltier" />
+                </div>
+                <div class="input-row">
+                    <label>Target Humidity (%) — controls Exhaust Fan</label>
+                    <input type="number" id="cfg-hum" placeholder="Controls Exhaust Fan" />
                 </div>
                 <div class="input-row">
                     <label>Min Soil Moisture (%)</label>
-                    <input type="number" id="cfg-soil" placeholder="Triggers Water Pump">
+                    <input type="number" id="cfg-soil" placeholder="Triggers Water Pump" />
+                </div>
+                <div class="input-row" style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label>N (ppm)</label>
+                        <input type="number" id="cfg-n" placeholder="Nitrogen (N)" />
+                    </div>
+                    <div style="flex:1;">
+                        <label>P (ppm)</label>
+                        <input type="number" id="cfg-p" placeholder="Phosphorus (P)" />
+                    </div>
+                    <div style="flex:1;">
+                        <label>K (ppm)</label>
+                        <input type="number" id="cfg-k" placeholder="Potassium (K)" />
+                    </div>
                 </div>
                 <button class="btn-full" onclick="iot.saveConfig()">UPLOAD TO CONTROLLER</button>
             </div>
@@ -344,7 +365,7 @@
         <div id="menu-start" class="g-menu">
             <div class="g-title">SYNTHETOS DETECTED</div>
             <p style="max-width: 400px; color: #ccc; margin-bottom: 30px;">
-                The central AI core has been corrupted. Pilot the Vector Drone to neutralize the anomaly.
+                Intrusion signature: an adaptive virus is rewriting the core. Take control of the Vector Drone and purge the infection.
             </p>
             <div class="pc-hint">WASD: Move | SPACE: Fire | SHIFT: Dash</div>
             <button class="g-btn" onclick="gameApp.startMatch()">INITIATE DEFENSE</button>
@@ -392,14 +413,14 @@
             const text = document.getElementById('help-text');
             modal.style.display = 'flex';
             if(page === 'home') {
-                title.innerText = "Monitor Dashboard";
-                text.innerText = "View real-time sensor data. Double-tap the video feed to view full screen. Rotate phone for better view.";
+                title.innerText = "Monitor Dashboard (Home)";
+                text.innerText = "This screen shows live camera footage and the main sensors. LIVE means frames were received recently. If video stops, 'NO SIGNAL' will appear. Sensor tiles show latest values from the controller. Tap the feed to enlarge.";
             } else if (page === 'manual') {
                 title.innerText = "Manual Override";
-                text.innerText = "WARNING: Safety limits are disabled in Manual Mode.\nControls:\n- Exhaust: Fan\n- Peltier: Cooling Module\n- Pump: Water";
+                text.innerText = "Manual mode allows direct control of devices:\n- Exhaust Fan: controlled by humidity in AUTO; manual toggles override.\n- Peltier: single toggle controls both Peltier fans (hot-side + cold-side blower).\n- Water & NPK pumps: toggle to operate manually.\n\nSafety: Manual mode will ask for confirmation before switching critical devices to prevent accidental touches.";
             } else if (page === 'config') {
                 title.innerText = "Automation Settings";
-                text.innerText = "Set target values for Auto Mode. Logic:\n- Temp > Target + 1°C = Cooling ON\n- Soil < Target - 5% = Water ON";
+                text.innerText = "Set target values for AUTO mode. Valid ranges are enforced to protect the hardware.\nRules used by the system:\n- Peltier is triggered by temperature above Target + 1°C.\n- Exhaust fan is triggered by humidity above Target.\n- Water pump triggers when soil < Min Soil Moisture.\n- N, P, K targets are informational thresholds used by the controller.\n\nPress UPLOAD to validate and send settings to the controller.";
             }
         }
 
@@ -408,15 +429,26 @@
             document.getElementById('cam-modal').style.display = 'flex';
             document.getElementById('cam-modal-img').src = document.getElementById('cam-img').src;
         }
-        function closeCamModal() { document.getElementById('cam-modal').style.display = 'none'; }
+        function closeCamModal() { 
+            document.getElementById('cam-modal').style.display = 'none'; 
+            document.getElementById('cam-modal-live').hidden = true;
+        }
 
         // --- 2. IOT MANAGER ---
         const iot = {
             socket: null,
             isManual: false,
+            lastFrameAt: 0,
             init: () => {
-                iot.socket = io(CONFIG.serverUrl, { transports: ['websocket', 'polling'] });
+                try {
+                    iot.socket = io(CONFIG.serverUrl, { transports: ['websocket', 'polling'] });
+                } catch (e) {
+                    console.warn("Socket init failed:", e);
+                    document.getElementById('conn-text').innerText = "OFFLINE";
+                }
                 
+                if(!iot.socket) return;
+
                 iot.socket.on('connect', () => {
                     document.getElementById('conn-text').innerText = "ONLINE";
                     document.getElementById('conn-dot').classList.add('online');
@@ -428,19 +460,62 @@
                 });
 
                 iot.socket.on('sensor_data', (data) => {
-                    if(data.temp) document.getElementById('val-temp').innerText = data.temp.toFixed(1);
-                    if(data.hum) document.getElementById('val-hum').innerText = data.hum.toFixed(1);
-                    if(data.soil1) document.getElementById('val-soil').innerText = data.soil1; // Using soil1 as avg
-                    if(data.n !== undefined) document.getElementById('val-npk').innerText = `${data.n}-${data.p}-${data.k}`;
+                    try {
+                        if(typeof data !== 'object') return;
+                        // Defensive guards
+                        if(data.temp !== undefined && isFinite(data.temp)) document.getElementById('val-temp').innerText = Number(data.temp).toFixed(1);
+                        if(data.hum !== undefined && isFinite(data.hum)) document.getElementById('val-hum').innerText = Number(data.hum).toFixed(1);
+                        if(data.soil1 !== undefined) document.getElementById('val-soil').innerText = data.soil1;
+                        if(data.n !== undefined && data.p !== undefined && data.k !== undefined) document.getElementById('val-npk').innerText = `${data.n}-${data.p}-${data.k}`;
+                    } catch(err) {
+                        console.warn("sensor_data handler error:", err);
+                    }
                 });
 
                 iot.socket.on('video_frame', (b64) => {
-                    const src = "data:image/jpeg;base64," + b64;
-                    document.getElementById('cam-img').src = src;
-                    if(document.getElementById('cam-modal').style.display === 'flex') {
-                        document.getElementById('cam-modal-img').src = src;
+                    try {
+                        if(!b64) return;
+                        const src = "data:image/jpeg;base64," + b64;
+                        const img = document.getElementById('cam-img');
+                        img.src = src;
+                        iot.lastFrameAt = Date.now();
+                        const live = document.getElementById('cam-live');
+                        live.innerText = "LIVE";
+                        live.style.color = "var(--green)";
+                        live.classList.remove('sig-off');
+                        // modal if open
+                        if(document.getElementById('cam-modal').style.display === 'flex') {
+                            document.getElementById('cam-modal-img').src = src;
+                            document.getElementById('cam-modal-live').hidden = false;
+                        }
+                    } catch(err) {
+                        console.warn("video_frame error:", err);
                     }
                 });
+
+                // Safety: check stream health
+                setInterval(() => {
+                    const live = document.getElementById('cam-live');
+                    const now = Date.now();
+                    if(iot.lastFrameAt === 0 || (now - iot.lastFrameAt) > 2500) {
+                        live.innerText = "NO SIGNAL";
+                        live.style.color = "#bbb";
+                        live.classList.add('sig-off');
+                        // clear image only visually (don't remove src to avoid flicker)
+                        // optionally show placeholder:
+                        document.getElementById('cam-img').alt = "NO SIGNAL";
+                        if(document.getElementById('cam-modal').style.display === 'flex') {
+                            document.getElementById('cam-modal-live').hidden = true;
+                        }
+                    } else {
+                        // live
+                        if(live.innerText !== "LIVE") {
+                            live.innerText = "LIVE";
+                            live.style.color = "var(--green)";
+                            live.classList.remove('sig-off');
+                        }
+                    }
+                }, 900);
             },
 
             toggleMode: () => {
@@ -452,42 +527,92 @@
                 btn.classList.toggle('mode-man', iot.isManual);
                 panel.style.opacity = iot.isManual ? "1" : "0.5";
                 panel.style.pointerEvents = iot.isManual ? "auto" : "none";
-                iot.socket.emit('command', { mode: iot.isManual ? 'manual' : 'auto' });
+                if(iot.socket) iot.socket.emit('command', { mode: iot.isManual ? 'manual' : 'auto' });
             },
 
             toggleDevice: (devId) => {
                 if(!iot.isManual) return;
-                const btn = document.getElementById('btn-' + (devId === 'pump_n' ? 'npk' : (devId === 'pump_w' ? 'pump' : (devId === 'exhaust' ? 'fan' : 'peltier'))));
-                const isOn = btn.classList.contains('on');
-                
-                // Optimistic UI
-                if(isOn) { btn.classList.remove('on'); btn.innerText = "OFF"; } 
-                else { btn.classList.add('on'); btn.innerText = "ON"; }
+                // guard UI mapping
+                const btnMap = { 'pump_n': 'npk', 'pump_w': 'pump', 'exhaust':'fan', 'peltier':'peltier' };
+                const btn = document.getElementById('btn-' + (btnMap[devId] || btnMap[devId] === undefined ? (devId === 'exhaust' ? 'fan' : (devId === 'pump_w' ? 'pump' : (devId === 'pump_n' ? 'npk' : (devId === 'peltier' ? 'peltier' : devId))))) : 'btn-' + devId));
+                const targetBtn = btn || document.getElementById('btn-' + devId);
+                const isOn = targetBtn && targetBtn.classList.contains('on');
 
-                iot.socket.emit('command', { [devId]: !isOn });
+                // Critical device confirmation to avoid accidental toggles
+                if(devId === 'peltier' || devId === 'pump_w' || devId === 'pump_n') {
+                    const ok = confirm(`Confirm toggle for ${devId}. This will affect hardware directly. Proceed?`);
+                    if(!ok) return;
+                }
+
+                // Optimistic UI toggle
+                if(targetBtn) {
+                    if(isOn) { targetBtn.classList.remove('on'); targetBtn.innerText = "OFF"; } 
+                    else { targetBtn.classList.add('on'); targetBtn.innerText = "ON"; }
+                }
+
+                // Emit single device id; Peltier represents both fans (controller must handle both)
+                if(iot.socket) {
+                    iot.socket.emit('command', { [devId]: !isOn });
+                }
             },
 
             saveConfig: () => {
                 // FAILSAFE: Validate Inputs
                 const t = parseFloat(document.getElementById('cfg-temp').value);
                 const s = parseInt(document.getElementById('cfg-soil').value);
+                const h = parseFloat(document.getElementById('cfg-hum').value);
+                const n = parseInt(document.getElementById('cfg-n').value);
+                const p = parseInt(document.getElementById('cfg-p').value);
+                const k = parseInt(document.getElementById('cfg-k').value);
 
-                if(isNaN(t) || t < 15 || t > 40) {
-                    alert("Error: Temperature target must be between 15°C and 40°C.");
+                // Temperature: safe 10 - 45
+                if(isNaN(t) || t < 10 || t > 45) {
+                    alert("Error: Temperature target must be between 10°C and 45°C.");
                     return;
                 }
-                if(isNaN(s) || s < 0 || s > 90) {
-                    alert("Error: Soil target must be between 0% and 90%.");
+                // Soil moisture 0 - 100%
+                if(isNaN(s) || s < 0 || s > 100) {
+                    alert("Error: Soil target must be between 0% and 100%.");
+                    return;
+                }
+                // Humidity 5 - 95%
+                if(isNaN(h) || h < 5 || h > 95) {
+                    alert("Error: Humidity target must be between 5% and 95%.");
+                    return;
+                }
+                // NPK ppm: 0 - 2000 (reasonable guard)
+                const npkLimits = (val) => !(isNaN(val) || val < 0 || val > 2000);
+                if(!npkLimits(n) || !npkLimits(p) || !npkLimits(k)) {
+                    alert("Error: N, P, K must be between 0 and 2000 (ppm).");
                     return;
                 }
 
-                iot.socket.emit('command', { set_temp: t, set_soil: s });
-                alert("Configuration verified and uploaded.");
+                if(!iot.socket) {
+                    alert("Not connected to controller. Cannot upload.");
+                    return;
+                }
+
+                // Build safe payload
+                const payload = {
+                    set_temp: Number(t),
+                    set_soil: Number(s),
+                    set_hum: Number(h),
+                    set_n: Number(n),
+                    set_p: Number(p),
+                    set_k: Number(k)
+                };
+
+                try {
+                    iot.socket.emit('command', payload);
+                    alert("Configuration verified and uploaded.");
+                } catch(err) {
+                    alert("Failed to send configuration: " + err);
+                }
             }
         };
         iot.init();
 
-        // --- 3. SYNTHETOS GAME ENGINE (Heavy Modification) ---
+        // --- 3. SYNTHETOS GAME ENGINE (Modified & balanced) ---
         const gameApp = {
             canvas: document.getElementById('gc'),
             ctx: document.getElementById('gc').getContext('2d'),
@@ -495,18 +620,19 @@
             width: 0, height: 0, loopId: null,
             
             // Game State
-            phase: 0, // 0: Intro, 1: Shield, 2: Transform, 3: Exposed
+            phase: 0, // 0: Intro, 1: Shield, 2: Transform, 3: Unshackled
             phaseTimer: 0,
             shake: 0,
 
             // Entities
             player: { 
-                x: 0, y: 0, r: 15, hp: 100, speed: 6, bullets: [], 
+                x: 0, y: 0, r: 15, hp: 120, speed: 6, bullets: [], 
                 dashCooldown: 0, dashDuration: 0, invulnerable: false 
             },
             boss: { 
-                x: 0, y: 0, r: 60, hp: 1000, maxHp: 1000, 
-                angle: 0, projectiles: [], attackTimer: 0, pattern: 0 
+                x: 0, y: 0, r: 60, hp: 900, maxHp: 900, 
+                angle: 0, projectiles: [], attackTimer: 0, pattern: 0,
+                introScale: 0
             },
             particles: [],
 
@@ -539,24 +665,26 @@
             },
 
             startMatch: () => {
-                // Reset Logic
+                // Reset Logic & entrance animation
                 gameApp.player.x = gameApp.width / 2;
                 gameApp.player.y = gameApp.height - 150;
-                gameApp.player.hp = 100;
+                gameApp.player.hp = 120;
                 gameApp.player.bullets = [];
                 gameApp.player.dashCooldown = 0;
                 
                 gameApp.boss.x = gameApp.width / 2;
                 gameApp.boss.y = 150;
-                gameApp.boss.hp = 1000;
-                gameApp.boss.maxHp = 1000;
+                gameApp.boss.hp = 900;
+                gameApp.boss.maxHp = 900;
                 gameApp.boss.projectiles = [];
                 gameApp.boss.attackTimer = 0;
-                
+                gameApp.boss.introScale = 0;
+
                 gameApp.phase = 0; // Intro
-                gameApp.phaseTimer = 100; // Intro duration
+                gameApp.phaseTimer = 120; // Intro duration (longer to show entrance)
                 gameApp.particles = [];
-                
+
+                // Hide menus
                 document.querySelectorAll('.g-menu').forEach(m => m.style.display = 'none');
                 gameApp.isRunning = true;
                 gameApp.isPaused = false;
@@ -612,11 +740,33 @@
                     if(g.shake < 0.5) g.shake = 0;
                 }
 
-                // Clear
+                // Clear + subtle background (grid + stars)
                 ctx.save();
                 ctx.translate(rx, ry);
-                ctx.fillStyle = 'rgba(0,0,0,0.2)'; // Trails
+                // background fill
+                ctx.fillStyle = '#000';
                 ctx.fillRect(-10, -10, g.width+20, g.height+20);
+
+                // faint grid for motion reference (reduces dizziness)
+                ctx.save();
+                ctx.globalAlpha = 0.04;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                for(let x=0; x<g.width; x+=60) {
+                    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,g.height); ctx.stroke();
+                }
+                for(let y=0; y<g.height; y+=60) {
+                    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(g.width,y); ctx.stroke();
+                }
+                ctx.restore();
+
+                // small starfield
+                ctx.save();
+                ctx.globalAlpha = 0.06;
+                for(let i=0;i<40;i++){
+                    ctx.fillRect((i*23)%g.width, (i*17)%g.height, 1, 1);
+                }
+                ctx.restore();
 
                 // --- 1. PLAYER LOGIC ---
                 // Dash Logic
@@ -658,10 +808,10 @@
                 ctx.save();
                 ctx.translate(g.player.x, g.player.y);
                 if(g.player.invulnerable) ctx.globalAlpha = 0.5;
-                // Thruster
-                ctx.fillStyle = `rgba(0, 243, 255, ${Math.random()})`;
+                // Thruster (animated)
+                ctx.fillStyle = `rgba(0, 243, 255, ${0.4 + Math.random()*0.6})`;
                 ctx.beginPath(); ctx.moveTo(-5, 10); ctx.lineTo(0, 25 + Math.random()*10); ctx.lineTo(5, 10); ctx.fill();
-                // Body
+                // Body (vector-like)
                 ctx.fillStyle = '#eee';
                 ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(12, 10); ctx.lineTo(0, 5); ctx.lineTo(-12, 10); ctx.fill();
                 ctx.restore();
@@ -683,7 +833,7 @@
                     if(g.phase === 1 || g.phase === 3) {
                         let dist = Math.hypot(b.x - g.boss.x, b.y - g.boss.y);
                         if(dist < g.boss.r) {
-                            g.boss.hp -= 10;
+                            g.boss.hp -= 15; // stronger bullet
                             g.player.bullets.splice(i, 1);
                             g.spawnExplosion(b.x, b.y, '#00f3ff', 3);
                             continue;
@@ -695,124 +845,147 @@
                 // --- 2. BOSS LOGIC ---
                 g.boss.angle += 0.02;
 
-                // Phase 0: Intro
+                // Phase 0: Intro (Entrance animation)
                 if(g.phase === 0) {
                     document.getElementById('boss-name').innerText = "SYSTEM ALERT";
                     g.phaseTimer--;
-                    g.boss.y = (g.height * 0.2) + Math.sin(g.phaseTimer*0.1)*5;
-                    // Draw Intro Form
-                    g.drawPoly(ctx, g.boss.x, g.boss.y, 6, g.boss.r, '#555', g.boss.angle);
-                    if(g.phaseTimer <= 0) { g.phase = 1; document.getElementById('boss-name').innerText = "CORE: SHIELDED"; }
+                    // Boss intro scale grows
+                    g.boss.introScale += 0.04;
+                    g.boss.introScale = Math.min(1, g.boss.introScale);
+                    const drawR = g.boss.r * g.boss.introScale;
+                    // draw layered polygons to make an animated form
+                    g.drawPoly(ctx, g.boss.x, g.boss.y, 8, drawR*0.6, '#222', g.boss.angle);
+                    g.drawPoly(ctx, g.boss.x, g.boss.y, 6, drawR*0.8, '#444', -g.boss.angle*1.5);
+                    g.drawPoly(ctx, g.boss.x, g.boss.y, 4, drawR*0.4, '#ff0055', g.boss.angle*2);
+                    if(g.phaseTimer <= 0 && g.boss.introScale >= 1) { g.phase = 1; document.getElementById('boss-name').innerText = "CORE: SHIELDED"; }
                 }
 
-                // Phase 1: Shielded Core
+                // Phase 1: Shielded Core (reworked patterns)
                 else if (g.phase === 1) {
                     g.boss.x = (g.width/2) + Math.sin(Date.now()*0.001) * 100;
                     g.boss.attackTimer++;
                     
-                    // Draw: Hexagon Shield
-                    ctx.shadowBlur = 15; ctx.shadowColor = 'var(--pink)';
-                    g.drawPoly(ctx, g.boss.x, g.boss.y, 6, g.boss.r, '#222', g.boss.angle);
-                    g.drawPoly(ctx, g.boss.x, g.boss.y, 3, g.boss.r/2, '#ff0055', -g.boss.angle*2);
-                    ctx.shadowBlur = 0;
+                    // Draw: layered shield with hex + triangle motif
+                    ctx.save();
+                    ctx.shadowBlur = 16; ctx.shadowColor = '#ff66aa';
+                    g.drawPoly(ctx, g.boss.x, g.boss.y, 6, g.boss.r, '#111', g.boss.angle);
+                    g.drawPoly(ctx, g.boss.x, g.boss.y, 3, g.boss.r/1.9, '#ff0055', -g.boss.angle*2);
+                    ctx.restore();
 
-                    // Phase 1 Attacks (7 Patterns)
-                    if(g.boss.attackTimer % 60 === 0) {
+                    // Phase 1 Attacks (7 Patterns remodeled visually)
+                    if(g.boss.attackTimer % 70 === 0) { // slightly slower
                         const pat = Math.floor(Math.random() * 7);
-                        if(pat === 0) { // Ring
-                            for(let i=0; i<12; i++) g.shootBoss(g.boss.x, g.boss.y, Math.cos(i*0.5)*4, Math.sin(i*0.5)*4);
-                        } else if (pat === 1) { // Aimed Tri
+                        // preserve patterns count, but change behavior & visuals
+                        if(pat === 0) { // Expanding Polygon Burst (ring-like but angular)
+                            for(let i=0; i<10; i++) {
+                                const ang = (i/g.boss.r)*Math.PI*2 + i*0.6;
+                                g.shootBoss(g.boss.x + Math.cos(ang)*10, g.boss.y + Math.sin(ang)*10, Math.cos(ang)*4, Math.sin(ang)*4);
+                                g.spawnExplosion(g.boss.x + Math.cos(ang)*10, g.boss.y + Math.sin(ang)*10, '#ff66aa', 1);
+                            }
+                        } else if (pat === 1) { // Aimed Tri with spin
                             let a = Math.atan2(g.player.y - g.boss.y, g.player.x - g.boss.x);
-                            g.shootBoss(g.boss.x, g.boss.y, Math.cos(a)*6, Math.sin(a)*6);
-                            g.shootBoss(g.boss.x, g.boss.y, Math.cos(a+0.2)*6, Math.sin(a+0.2)*6);
-                            g.shootBoss(g.boss.x, g.boss.y, Math.cos(a-0.2)*6, Math.sin(a-0.2)*6);
-                        } else if (pat === 2) { // Spiral
-                             for(let i=0; i<5; i++) g.shootBoss(g.boss.x, g.boss.y, Math.cos(g.boss.angle+i)*5, Math.sin(g.boss.angle+i)*5);
-                        } else if (pat === 3) { // Wall
-                             for(let i=0; i<10; i++) g.shootBoss(i*(g.width/10), 0, 0, 4);
-                        } else if (pat === 4) { // Shotgun
-                             for(let i=0; i<8; i++) g.shootBoss(g.boss.x, g.boss.y, (Math.random()-0.5)*10, 5 + Math.random()*5);
-                        } else if (pat === 5) { // Cross
-                             g.shootBoss(g.boss.x, g.boss.y, 5, 0); g.shootBoss(g.boss.x, g.boss.y, -5, 0);
-                             g.shootBoss(g.boss.x, g.boss.y, 0, 5); g.shootBoss(g.boss.x, g.boss.y, 0, -5);
-                        } else { // Random Rain
-                             g.shootBoss(Math.random()*g.width, 0, 0, 8);
+                            for(let i=-1;i<=1;i++){
+                                const vx = Math.cos(a + i*0.18)*6;
+                                const vy = Math.sin(a + i*0.18)*6;
+                                g.shootBoss(g.boss.x, g.boss.y, vx, vy);
+                            }
+                        } else if (pat === 2) { // Spiral petals (shape clusters)
+                            for(let i=0; i<6; i++){
+                                const a = g.boss.angle + i*1.047;
+                                g.shootBoss(g.boss.x + Math.cos(a)*8, g.boss.y + Math.sin(a)*8, Math.cos(a)*5, Math.sin(a)*5);
+                            }
+                        } else if (pat === 3) { // Wall - vertical serrated
+                            for(let i=0; i<12; i++) g.shootBoss(i*(g.width/12), -10, 0, 4 + (i%3));
+                        } else if (pat === 4) { // Shotgun bloom (cluster)
+                            for(let i=0; i<10; i++) g.shootBoss(g.boss.x, g.boss.y, (Math.random()-0.5)*10, 4 + Math.random()*6);
+                        } else if (pat === 5) { // Cross + rotating mini-shots
+                            g.shootBoss(g.boss.x, g.boss.y, 5, 0); g.shootBoss(g.boss.x, g.boss.y, -5, 0);
+                            g.shootBoss(g.boss.x, g.boss.y, 0, 5); g.shootBoss(g.boss.x, g.boss.y, 0, -5);
+                        } else { // Random Rain with visual sparks
+                            for(let i=0; i<6; i++) {
+                                g.shootBoss(Math.random()*g.width, -10, 0, 6 + Math.random()*2);
+                            }
                         }
                     }
 
-                    if(g.boss.hp <= 500) {
-                        g.phase = 2; g.phaseTimer = 150; g.shake = 20;
-                        g.spawnExplosion(g.boss.x, g.boss.y, 'white', 50);
+                    if(g.boss.hp <= g.boss.maxHp * 0.5) {
+                        g.phase = 2; g.phaseTimer = 140; g.shake = 22;
+                        g.spawnExplosion(g.boss.x, g.boss.y, 'white', 40);
                     }
                 }
 
-                // Phase 2: Transformation Cutscene
+                // Phase 2: Transformation Cutscene (glitchy)
                 else if (g.phase === 2) {
                     g.player.invulnerable = true;
                     g.phaseTimer--;
                     g.boss.x = g.width/2; g.boss.y = 200;
                     document.getElementById('boss-name').innerText = "ERROR... RECONFIGURING...";
                     
-                    // Draw glitchy mess
-                    let scale = 1 + Math.random();
-                    g.drawPoly(ctx, g.boss.x, g.boss.y, 8, g.boss.r * scale, '#fff', Math.random()*10);
+                    // Draw glitchy transformed shape using combined polygons
+                    const scale = 1 + Math.sin(Date.now()*0.01)*0.3 + Math.random()*0.2;
+                    g.drawPoly(ctx, g.boss.x, g.boss.y, 10, g.boss.r * scale, '#fff', Math.random()*10);
                     
                     if(g.phaseTimer <= 0) { 
                         g.phase = 3; 
                         document.getElementById('boss-name').innerText = "CORE: UNSHACKLED";
                         g.player.invulnerable = false;
-                        g.boss.maxHp = 500; // Reset bar visual for P2
+                        g.boss.maxHp = 600;
+                        g.boss.hp = 600; // reset health for Phase 2 (distinct)
+                        g.boss.attackTimer = 0;
                     }
                 }
 
-                // Phase 3: Unshackled (Phase 2 Combat)
+                // Phase 3: Unshackled (Phase 2 Combat - harder, remodeled)
                 else if (g.phase === 3) {
                     g.boss.attackTimer++;
-                    // Erratic Movement
-                    if(g.boss.attackTimer % 40 === 0) {
+                    // Erratic Movement, more dynamic
+                    if(!g.boss.tx || g.boss.attackTimer % 80 === 0) {
                         g.boss.tx = Math.random() * g.width;
                         g.boss.ty = Math.random() * (g.height/2);
                     }
-                    g.boss.x += (g.boss.tx - g.boss.x || 0) * 0.05;
+                    g.boss.x += (g.boss.tx - g.boss.x || 0) * 0.06;
                     g.boss.y += (g.boss.ty - g.boss.y || 0) * 0.05;
 
-                    // Draw: Spiky Star
-                    ctx.shadowBlur = 30; ctx.shadowColor = 'red';
+                    // Draw: Spiky multi-star made from polygons
+                    ctx.save(); ctx.shadowBlur = 28; ctx.shadowColor = '#ff3355';
                     ctx.beginPath();
                     for(let i=0; i<16; i++) {
-                        let r = (i%2===0) ? g.boss.r : g.boss.r*0.4;
+                        let r = (i%2===0) ? g.boss.r : g.boss.r*0.45;
                         let a = g.boss.angle + (i * Math.PI * 2)/16;
                         ctx.lineTo(g.boss.x + Math.cos(a)*r, g.boss.y + Math.sin(a)*r);
                     }
                     ctx.fillStyle = '#ff0055'; ctx.fill();
-                    ctx.shadowBlur = 0;
+                    ctx.restore();
 
-                    // Phase 2 Attacks (8 Patterns - Harder)
-                    if(g.boss.attackTimer % 40 === 0) {
+                    // Phase 2 Attacks (8 Patterns - distinct & tougher)
+                    if(g.boss.attackTimer % 45 === 0) {
                         const pat = Math.floor(Math.random() * 8);
-                        if(pat === 0) { // Nova
-                            for(let i=0; i<20; i++) g.shootBoss(g.boss.x, g.boss.y, Math.cos(i)*6, Math.sin(i)*6);
-                        } else if (pat === 1) { // Homing Start
-                            g.shootBoss(g.boss.x, g.boss.y, 0, 2, true); // True = homing
-                        } else if (pat === 2) { // Laser Sweep (Simulated by dense bullets)
-                             for(let i=0; i<10; i++) g.shootBoss(g.boss.x, g.boss.y, Math.cos(g.boss.angle)*10 + i, Math.sin(g.boss.angle)*10 + i);
-                        } else if (pat === 3) { // Chaos Spray
-                             for(let i=0; i<5; i++) g.shootBoss(g.boss.x, g.boss.y, (Math.random()-0.5)*15, (Math.random()-0.5)*15);
+                        if(pat === 0) { // Nova (dense)
+                            for(let i=0; i<24; i++) g.shootBoss(g.boss.x, g.boss.y, Math.cos(i/3.8)*6, Math.sin(i/3.8)*6);
+                        } else if (pat === 1) { // Homing Launcher
+                            g.shootBoss(g.boss.x, g.boss.y, 0, 2, true);
+                            g.shootBoss(g.boss.x - 20, g.boss.y, 0, 2.2, true);
+                        } else if (pat === 2) { // Laser Sweep (dense line of fast projectiles)
+                            for(let i=-6;i<=6;i++) g.shootBoss(g.boss.x + i*10, -10, i*0.6, 10);
+                        } else if (pat === 3) { // Chaos Spray (random bursts)
+                            for(let i=0; i<10; i++) g.shootBoss(g.boss.x, g.boss.y, (Math.random()-0.5)*18, (Math.random()-0.5)*18);
                         } else if (pat === 4) { // Fast Stream aimed
-                             let a = Math.atan2(g.player.y - g.boss.y, g.player.x - g.boss.x);
-                             g.shootBoss(g.boss.x, g.boss.y, Math.cos(a)*12, Math.sin(a)*12);
-                        } else if (pat === 5) { // Side Ambush
-                             g.shootBoss(0, g.player.y, 5, 0); g.shootBoss(g.width, g.player.y, -5, 0);
-                        } else if (pat === 6) { // X-Pattern
-                             g.shootBoss(g.boss.x, g.boss.y, 5, 5); g.shootBoss(g.boss.x, g.boss.y, -5, 5);
-                             g.shootBoss(g.boss.x, g.boss.y, 5, -5); g.shootBoss(g.boss.x, g.boss.y, -5, -5);
-                        } else { // Expanding Circle
-                             for(let i=0; i<8; i++) g.shootBoss(g.player.x + Math.cos(i)*100, g.player.y + Math.sin(i)*100, -Math.cos(i)*2, -Math.sin(i)*2);
+                            let a = Math.atan2(g.player.y - g.boss.y, g.player.x - g.boss.x);
+                            g.shootBoss(g.boss.x, g.boss.y, Math.cos(a)*14, Math.sin(a)*14);
+                        } else if (pat === 5) { // Side Ambush (rows from edges)
+                            for(let y=0;y<5;y++){
+                                g.shootBoss(0, y*(g.height/5), 6, 0); g.shootBoss(g.width, y*(g.height/5), -6, 0);
+                            }
+                        } else if (pat === 6) { // X-Pattern cross shots
+                            g.shootBoss(g.boss.x, g.boss.y, 6, 6); g.shootBoss(g.boss.x, g.boss.y, -6, 6);
+                            g.shootBoss(g.boss.x, g.boss.y, 6, -6); g.shootBoss(g.boss.x, g.boss.y, -6, -6);
+                        } else { // Expanding tethered cores (aim at player then expand)
+                            for(let i=0; i<8; i++) g.shootBoss(g.player.x + Math.cos(i)*120, g.player.y + Math.sin(i)*120, -Math.cos(i)*2, -Math.sin(i)*2);
                         }
                     }
 
                     if(g.boss.hp <= 0) {
-                        g.spawnExplosion(g.boss.x, g.boss.y, '#ff0055', 100);
+                        g.spawnExplosion(g.boss.x, g.boss.y, '#ff0055', 150);
                         document.getElementById('menu-win').style.display = 'flex';
                         g.isRunning = false;
                     }
@@ -828,23 +1001,32 @@
                         p.vy += Math.sin(angle) * 0.2;
                         // Cap speed
                         let pmag = Math.hypot(p.vx, p.vy);
-                        if(pmag > 5) { p.vx = (p.vx/pmag)*5; p.vy = (p.vy/pmag)*5; }
+                        if(pmag > 7) { p.vx = (p.vx/pmag)*7; p.vy = (p.vy/pmag)*7; }
                     }
                     p.x += p.vx; p.y += p.vy;
                     
-                    // Draw projectile
-                    ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
+                    // Draw projectile with subtle shape depending on homing
+                    ctx.beginPath();
+                    if(p.homing) {
+                        ctx.arc(p.x, p.y, 8, 0, Math.PI*2);
+                        ctx.fillStyle = '#ff99dd';
+                        ctx.fill();
+                    } else {
+                        ctx.rect(p.x-4, p.y-4, 8, 8);
+                        ctx.fillStyle = '#ff5555';
+                        ctx.fill();
+                    }
 
                     // Hit Player
                     let hitDist = Math.hypot(p.x - g.player.x, p.y - g.player.y);
-                    if(hitDist < g.player.r + 5) {
+                    if(hitDist < g.player.r + 6) {
                         if(!g.player.invulnerable) {
-                            g.player.hp -= 15;
+                            g.player.hp -= 10; // less damage than before for balance
                             g.shake = 10;
                             g.spawnExplosion(g.player.x, g.player.y, '#39ff14', 10);
                             g.boss.projectiles.splice(i, 1);
                         }
-                    } else if (p.x < 0 || p.x > g.width || p.y < 0 || p.y > g.height) {
+                    } else if (p.x < -50 || p.x > g.width+50 || p.y < -50 || p.y > g.height+50) {
                          g.boss.projectiles.splice(i, 1);
                     }
                 }
@@ -857,9 +1039,9 @@
                     if(pt.life <= 0) g.particles.splice(i, 1);
                 }
 
-                // HUD
+                // HUD updates
                 document.getElementById('hud-player-hp').style.width = Math.max(0, g.player.hp) + "%";
-                let bossPct = (g.phase < 3) ? (g.boss.hp / 1000 * 100) : (g.boss.hp / 500 * 100);
+                let bossPct = (g.phase < 3) ? (g.boss.hp / g.boss.maxHp * 100) : (g.boss.hp / g.boss.maxHp * 100);
                 document.getElementById('hud-boss-hp').style.width = Math.max(0, bossPct) + "%";
                 
                 // Dash UI
@@ -904,13 +1086,17 @@
             if(e.key === 'Escape' && gameApp.isRunning) gameApp.pause();
         });
 
-        // Touch Tracking (Anti-Ghost Touch)
+        // Touch Tracking (Anti-Ghost Touch & pointer fallback)
         const joyZone = document.getElementById('joy-zone');
         const stick = document.getElementById('joy-stick');
         const fireBtn = document.getElementById('btn-fire');
         const dashBtn = document.getElementById('btn-dash');
 
+        // Basic anti-ghost: ignore abnormal many-finger touches
+        const MAX_ACCEPTED_TOUCHES = 6;
+
         joyZone.addEventListener('touchstart', (e) => {
+            if(e.touches.length > MAX_ACCEPTED_TOUCHES) return;
             e.preventDefault();
             const t = e.changedTouches[0];
             gameApp.joy.id = t.identifier;
@@ -952,10 +1138,66 @@
         joyZone.addEventListener('touchend', resetJoy);
         joyZone.addEventListener('touchcancel', resetJoy);
 
-        // Buttons
-        fireBtn.addEventListener('touchstart', (e) => { e.preventDefault(); gameApp.keys.space = true; });
-        fireBtn.addEventListener('touchend', (e) => { e.preventDefault(); gameApp.keys.space = false; });
-        dashBtn.addEventListener('touchstart', (e) => { e.preventDefault(); gameApp.keys.shift = true; });
+        // Per-button debounced touch handlers to avoid ghost touches
+        function makeButtonTouchSafe(el, onActivate, minMs = 40) {
+            let lastTouchStart = 0;
+            let activeTouchId = null;
+            el.addEventListener('touchstart', (e) => {
+                if(e.touches.length > MAX_ACCEPTED_TOUCHES) return;
+                e.preventDefault();
+                const t = e.changedTouches[0];
+                activeTouchId = t.identifier;
+                lastTouchStart = Date.now();
+                // trigger onActivate immediately for responsiveness
+                onActivate(true);
+            }, {passive:false});
+            el.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                // ensure touch lasted at least minMs
+                const duration = Date.now() - lastTouchStart;
+                if(duration < minMs) {
+                    // ignore brief phantom touch: treat as canceled
+                    onActivate(false, true);
+                } else {
+                    onActivate(false);
+                }
+                activeTouchId = null;
+            }, {passive:false});
+            el.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                onActivate(false, true);
+                activeTouchId = null;
+            }, {passive:false});
+
+            // pointer/mouse fallback for PC (debounced)
+            el.addEventListener('pointerdown', (e) => {
+                if(e.pointerType === 'mouse') {
+                    onActivate(true);
+                }
+            });
+            el.addEventListener('pointerup', (e) => {
+                if(e.pointerType === 'mouse') {
+                    onActivate(false);
+                }
+            });
+        }
+
+        makeButtonTouchSafe(fireBtn, (state, canceled) => {
+            if(canceled) { gameApp.keys.space = false; return; }
+            gameApp.keys.space = state;
+        });
+
+        makeButtonTouchSafe(dashBtn, (state, canceled) => {
+            if(canceled) { gameApp.keys.shift = false; return; }
+            gameApp.keys.shift = state;
+        });
+
+        // Keep old handlers for completeness (these are safe)
+        // (No direct raw touchstart -> fire to avoid ghost touches)
+
+        // window resize -> canvas resize
+        window.addEventListener('resize', gameApp.resize);
+
     </script>
 </body>
 </html>
