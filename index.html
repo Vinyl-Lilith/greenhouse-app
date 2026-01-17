@@ -3,26 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BioDome OS v3.0 | Synthetos</title>
+    <title>BioDome OS v4.0 | Synthetos</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* --- CORE VARIABLES & RESET --- */
+        /* --- CORE VARIABLES --- */
         :root {
             --cyan: #00f3ff;
             --pink: #ff0055;
             --green: #39ff14;
+            --yellow: #ffd700;
             --dark: #050510;
-            --panel: rgba(20, 20, 30, 0.85);
-            --border: 1px solid rgba(255, 255, 255, 0.1);
+            --panel: rgba(15, 15, 20, 0.9);
+            --border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
 
         body {
             font-family: 'Rajdhani', sans-serif;
-            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
+            background: radial-gradient(circle at center, #12121f 0%, #000000 100%);
             color: white;
             margin: 0;
             height: 100vh;
@@ -32,170 +33,141 @@
         }
 
         /* --- UI COMPONENTS --- */
-        /* Status Bar */
         .status-bar {
             height: 60px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0 20px;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
             border-bottom: 1px solid #333;
             z-index: 50;
         }
-        .brand { font-family: 'Orbitron'; letter-spacing: 2px; color: var(--cyan); }
-        .status-ind { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; }
-        .dot { width: 8px; height: 8px; background: #555; border-radius: 50%; box-shadow: 0 0 5px #555; transition: 0.3s; }
+        .brand { font-family: 'Orbitron'; font-weight: 900; letter-spacing: 2px; color: var(--cyan); text-shadow: 0 0 10px rgba(0,243,255,0.4); }
+        .status-ind { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; font-weight: 700; }
+        .dot { width: 10px; height: 10px; background: #333; border-radius: 50%; box-shadow: 0 0 5px #333; transition: 0.3s; }
         .dot.online { background: var(--green); box-shadow: 0 0 8px var(--green); }
 
-        /* Main App Area */
-        #app-viewport {
-            flex: 1;
-            position: relative;
-            overflow-y: auto;
-            padding-bottom: 80px; /* Nav spacing */
-        }
+        #app-viewport { flex: 1; position: relative; overflow-y: auto; padding-bottom: 80px; }
 
-        /* Pages */
-        .page { display: none; padding: 20px; max-width: 800px; margin: 0 auto; animation: slideUp 0.3s ease; }
+        .page { display: none; padding: 20px; max-width: 900px; margin: 0 auto; animation: slideUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
         .page.active { display: block; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Cards & Grids */
+        /* Cards */
         .card {
             background: var(--panel);
-            backdrop-filter: blur(8px);
             border: var(--border);
-            border-radius: 12px;
-            padding: 20px;
+            border-left: 3px solid var(--cyan);
+            border-radius: 8px;
+            padding: 25px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             position: relative;
         }
-        h2 { margin: 0 0 15px 0; color: var(--cyan); font-family: 'Orbitron'; font-size: 1.2rem; border-bottom: 1px solid #333; padding-bottom: 8px; }
-        
-        /* Help Icon */
+        h2 { margin: 0 0 20px 0; color: white; font-family: 'Orbitron'; font-size: 1.1rem; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 10px; }
         .help-btn {
-            position: absolute; top: 15px; right: 15px;
-            width: 24px; height: 24px;
-            border: 1px solid #666; border-radius: 50%;
-            text-align: center; line-height: 22px;
-            color: #aaa; cursor: pointer; font-size: 0.9rem; font-family: 'Orbitron';
+            position: absolute; top: 15px; right: 15px; width: 24px; height: 24px;
+            border: 1px solid #555; border-radius: 50%; text-align: center; line-height: 22px;
+            color: #777; cursor: pointer; font-family: 'Orbitron'; transition: 0.2s;
         }
-        .help-btn:hover { color: white; border-color: white; }
+        .help-btn:hover { color: var(--cyan); border-color: var(--cyan); }
 
-        /* Dashboard Sensors */
+        /* Dashboard Grid */
         .sensor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .sensor-box { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; text-align: center; }
-        .s-val { font-size: 1.8rem; font-weight: 700; color: #fff; display: block; }
-        .s-lbl { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .sensor-box { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 6px; text-align: center; border: 1px solid transparent; transition: 0.3s; }
+        .sensor-box:hover { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); }
+        .s-val { font-size: 2rem; font-weight: 700; color: #fff; display: block; font-family: 'Orbitron'; }
+        .s-lbl { font-size: 0.75rem; color: #aaa; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px; display: block; }
 
         /* Camera */
-        .cam-feed { width: 100%; height: 200px; background: #000; border: 1px solid #333; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;}
+        .cam-feed { width: 100%; height: 250px; background: #000; border: 1px solid #333; border-radius: 4px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .cam-feed img { width: 100%; height: 100%; object-fit: cover; }
-        .rec-dot { position: absolute; top: 10px; left: 10px; color: red; font-size: 0.8rem; font-weight: bold; animation: blink 1s infinite; }
+        .rec-dot { position: absolute; top: 15px; left: 15px; color: var(--pink); font-size: 0.7rem; font-weight: 900; letter-spacing: 1px; animation: blink 1.5s infinite; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; }
 
-        /* Manual Controls */
-        .toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; }
+        /* Inputs & Toggles */
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
+        .toggle-label { font-weight: 600; font-size: 0.9rem; letter-spacing: 0.5px; }
         .btn-toggle {
-            background: #222; color: #666; border: 1px solid #444; padding: 8px 25px;
-            font-family: 'Orbitron'; cursor: pointer; border-radius: 4px; transition: 0.2s;
+            background: #111; color: #555; border: 1px solid #333; padding: 8px 30px;
+            font-family: 'Orbitron'; font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.3s;
         }
-        .btn-toggle.on { background: var(--cyan); color: #000; box-shadow: 0 0 15px var(--cyan); border-color: var(--cyan); }
-        .btn-toggle.mode-man { background: var(--pink); color: #fff; box-shadow: 0 0 15px var(--pink); border-color: var(--pink); }
+        .btn-toggle.on { background: var(--cyan); color: #000; box-shadow: 0 0 15px rgba(0,243,255,0.4); border-color: var(--cyan); }
+        .btn-toggle.mode-man { background: var(--pink); color: #fff; box-shadow: 0 0 15px rgba(255,0,85,0.4); border-color: var(--pink); }
 
-        /* Config Inputs */
         .input-row { margin-bottom: 15px; }
-        .input-row label { display: block; color: #aaa; margin-bottom: 5px; font-size: 0.9rem; }
+        .input-row label { display: block; color: var(--cyan); margin-bottom: 8px; font-size: 0.8rem; font-weight: 700; letter-spacing: 1px; }
         .input-row input {
-            width: 100%; background: #111; border: 1px solid #444; color: var(--cyan); padding: 12px;
-            font-family: 'Orbitron'; border-radius: 4px;
+            width: 100%; background: #0a0a0a; border: 1px solid #333; color: white; padding: 12px;
+            font-family: 'Orbitron'; border-radius: 4px; transition: 0.2s;
         }
-        .btn-full { width: 100%; padding: 15px; background: #228b22; color: white; border: none; font-weight: bold; font-family: 'Orbitron'; cursor: pointer; border-radius: 4px; }
+        .input-row input:focus { border-color: var(--cyan); }
+        .btn-full { width: 100%; padding: 15px; background: linear-gradient(90deg, #1b5e20, #2e7d32); color: white; border: none; font-weight: 900; font-family: 'Orbitron'; letter-spacing: 2px; cursor: pointer; border-radius: 4px; transition: 0.2s; text-shadow: 0 1px 2px black; }
+        .btn-full:active { transform: scale(0.98); }
 
         /* Navigation */
         .nav-bar {
-            position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
-            background: #0a0a0f; border-top: 1px solid #333;
+            position: fixed; bottom: 0; left: 0; right: 0; height: 75px;
+            background: #08080c; border-top: 1px solid #333;
             display: flex; justify-content: space-around; align-items: center; z-index: 100;
         }
-        .nav-btn { display: flex; flex-direction: column; align-items: center; color: #555; cursor: pointer; flex: 1; }
-        .nav-btn span { font-size: 1.4rem; margin-bottom: 4px; }
-        .nav-btn div { font-size: 0.7rem; letter-spacing: 1px; }
-        .nav-btn.active { color: var(--cyan); text-shadow: 0 0 10px rgba(0,243,255,0.5); }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; color: #444; cursor: pointer; flex: 1; transition: 0.2s; }
+        .nav-btn span { font-size: 1.5rem; margin-bottom: 5px; }
+        .nav-btn div { font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; }
+        .nav-btn.active { color: var(--cyan); text-shadow: 0 0 15px rgba(0,243,255,0.6); transform: translateY(-5px); }
 
-        /* --- MODALS (Help) --- */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 2000;
-            display: none; align-items: center; justify-content: center;
-        }
-        .modal-box { background: #1a1a20; border: 1px solid #444; padding: 30px; border-radius: 8px; max-width: 90%; width: 400px; }
-        .modal-close { margin-top: 20px; background: #333; color: white; border: none; padding: 10px 20px; width: 100%; cursor: pointer; }
-
-        /* --- GAME UI LAYERS --- */
+        /* --- GAME ENGINE UI --- */
         #game-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 5000; display: none;
         }
         canvas { display: block; width: 100%; height: 100%; }
-
-        /* Game Overlays */
-        .g-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
         
-        /* HUD */
-        .hud-top { padding: 20px; display: flex; justify-content: space-between; width: 100%; }
-        .hp-bar-box { width: 100%; height: 12px; background: #333; border: 1px solid #555; margin-top: 5px; }
-        .hp-fill { height: 100%; transition: width 0.1s; }
+        .hud-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .hud-top { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; }
         
-        /* Pause/Menu Buttons */
-        .game-btn-corner { pointer-events: auto; background: rgba(0,0,0,0.5); border: 1px solid #555; color: white; padding: 8px 15px; font-family: 'Orbitron'; cursor: pointer; }
+        .bar-wrap { width: 250px; background: rgba(0,0,0,0.5); border: 1px solid #555; padding: 2px; }
+        .bar-fill { height: 10px; width: 100%; transition: width 0.1s; }
+        .hud-text { font-family: 'Orbitron'; font-size: 0.8rem; margin-bottom: 3px; font-weight: bold; }
 
-        /* Menus (Start, Pause, Game Over) */
-        .g-menu {
+        .game-menu {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 10; pointer-events: auto;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center;
+            background: rgba(0,0,0,0.95); z-index: 10; pointer-events: auto;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
         }
-        .g-title { font-size: 3rem; font-family: 'Orbitron'; color: var(--pink); margin-bottom: 20px; text-shadow: 2px 2px var(--cyan); }
-        .g-btn {
+        .gm-title { font-size: 3rem; font-family: 'Orbitron'; color: var(--pink); text-shadow: 3px 3px 0px var(--cyan); margin-bottom: 10px; }
+        .gm-btn {
             background: transparent; border: 2px solid var(--cyan); color: var(--cyan);
-            padding: 15px 40px; font-family: 'Orbitron'; font-size: 1.2rem; margin: 10px;
-            cursor: pointer; transition: 0.2s; width: 250px;
+            padding: 15px 40px; font-family: 'Orbitron'; font-weight: 900; font-size: 1.2rem;
+            margin: 10px; cursor: pointer; transition: 0.2s; min-width: 200px;
         }
-        .g-btn:hover { background: var(--cyan); color: black; }
-        .g-btn.danger { border-color: var(--pink); color: var(--pink); }
-        .g-btn.danger:hover { background: var(--pink); color: black; }
+        .gm-btn:hover { background: var(--cyan); color: #000; box-shadow: 0 0 20px var(--cyan); }
 
-        /* DEVICE SPECIFIC CONTROLS */
-        .touch-controls {
-            position: absolute; bottom: 20px; width: 100%; height: 150px;
-            pointer-events: none; padding: 0 40px;
-            display: none; /* Hidden by default */
-            justify-content: space-between;
-        }
-        /* Only show touch controls on touch devices */
-        @media (pointer: coarse) {
-            .touch-controls { display: flex; }
-            .pc-hint { display: none !important; }
-        }
-        /* Only show PC hints on non-touch */
-        @media (pointer: fine) {
-            .touch-controls { display: none; }
-            .pc-hint { display: block; color: #888; margin-top: 20px; font-family: 'Orbitron'; }
+        /* Rotate Screen Overlay */
+        #rotate-msg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 6000; display: none;
+            flex-direction: column; align-items: center; justify-content: center; color: white;
         }
 
-        .stick-zone { width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); pointer-events: auto; position: relative; }
-        .stick-nub { width: 50px; height: 50px; background: rgba(255,255,255,0.5); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        /* Mobile Controls */
+        .touch-ui {
+            position: absolute; bottom: 20px; width: 100%; height: 150px; pointer-events: none;
+            display: none; justify-content: space-between; padding: 0 50px;
+        }
+        @media (pointer: coarse) { .touch-ui { display: flex; } .pc-hint { display: none; } }
         
-        .fire-btn {
-            width: 100px; height: 100px; border-radius: 50%; background: rgba(255, 0, 85, 0.2);
-            border: 2px solid var(--pink); color: var(--pink); display: flex; align-items: center; justify-content: center;
-            font-family: 'Orbitron'; font-weight: bold; pointer-events: auto;
+        .joy-area { width: 140px; height: 140px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 50%; position: relative; pointer-events: auto; }
+        .joy-nub { width: 60px; height: 60px; background: rgba(255,255,255,0.3); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        
+        .btn-group { display: flex; gap: 20px; pointer-events: auto; align-items: flex-end; }
+        .action-btn { 
+            width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-family: 'Orbitron'; font-weight: bold; border: 2px solid; 
         }
-        .fire-btn:active { background: var(--pink); color: white; }
-
+        #btn-dash { border-color: var(--yellow); color: var(--yellow); background: rgba(255, 215, 0, 0.1); }
+        #btn-fire { border-color: var(--pink); color: var(--pink); background: rgba(255, 0, 85, 0.1); width: 110px; height: 110px; }
+        
         @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
@@ -212,17 +184,16 @@
     <div id="app-viewport">
         <div id="tab-home" class="page active">
             <div class="card">
-                <div class="help-btn" onclick="showHelp('home')">?</div>
-                <h2>Live Monitoring</h2>
+                <h2>GREENHOUSE LIVE</h2>
                 <div class="cam-feed">
-                    <div class="rec-dot">LIVE</div>
-                    <img id="cam-img" src="" alt="NO SIGNAL">
+                    <div class="rec-dot">LIVE FEED</div>
+                    <img id="cam-img" src="" alt="WAITING FOR SIGNAL...">
                 </div>
             </div>
             <div class="sensor-grid">
                 <div class="sensor-box">
                     <span class="s-val"><span id="val-temp">--</span>°C</span>
-                    <span class="s-lbl">Air Temp</span>
+                    <span class="s-lbl">Temperature</span>
                 </div>
                 <div class="sensor-box">
                     <span class="s-val"><span id="val-hum">--</span>%</span>
@@ -233,32 +204,35 @@
                     <span class="s-lbl">Soil Moisture</span>
                 </div>
                 <div class="sensor-box">
-                    <span class="s-val" id="val-npk" style="font-size: 1.2rem;">- - -</span>
-                    <span class="s-lbl">N - P - K</span>
+                    <span class="s-val" id="val-npk" style="font-size: 1.5rem;">-- - -- - --</span>
+                    <span class="s-lbl">N - P - K Level</span>
                 </div>
             </div>
         </div>
 
         <div id="tab-manual" class="page">
             <div class="card">
-                <div class="help-btn" onclick="showHelp('manual')">?</div>
-                <h2>System Override</h2>
+                <h2>HARDWARE OVERRIDE</h2>
                 <div class="toggle-row">
-                    <span>OPERATION MODE</span>
+                    <span class="toggle-label">SYSTEM MODE</span>
                     <button id="btn-mode" class="btn-toggle" onclick="iot.toggleMode()">AUTO</button>
                 </div>
-                <div id="manual-controls" style="opacity: 0.5; pointer-events: none; transition: 0.3s;">
+                <div id="manual-controls" style="opacity: 0.4; pointer-events: none; transition: 0.3s;">
                     <div class="toggle-row">
-                        <span>Exhaust Fan</span>
-                        <button id="btn-fan" class="btn-toggle" onclick="iot.toggleDevice('fan')">OFF</button>
+                        <span class="toggle-label">Exhaust Fan (Pin 22)</span>
+                        <button id="btn-exhaust" class="btn-toggle" onclick="iot.toggleDevice('exhaust')">OFF</button>
                     </div>
                     <div class="toggle-row">
-                        <span>Water Pump</span>
-                        <button id="btn-pump" class="btn-toggle" onclick="iot.toggleDevice('pump')">OFF</button>
+                        <span class="toggle-label">Peltier Cooler (Pin 23)</span>
+                        <button id="btn-peltier" class="btn-toggle" onclick="iot.toggleDevice('peltier')">OFF</button>
                     </div>
                     <div class="toggle-row">
-                        <span>NPK Nutrient Pump</span>
-                        <button id="btn-npk" class="btn-toggle" onclick="iot.toggleDevice('npk_pump')">OFF</button>
+                        <span class="toggle-label">Water Pump (Pin 24)</span>
+                        <button id="btn-pump_w" class="btn-toggle" onclick="iot.toggleDevice('pump_w')">OFF</button>
+                    </div>
+                    <div class="toggle-row">
+                        <span class="toggle-label">Nutrient Pump (Pin 25)</span>
+                        <button id="btn-pump_n" class="btn-toggle" onclick="iot.toggleDevice('pump_n')">OFF</button>
                     </div>
                 </div>
             </div>
@@ -266,29 +240,19 @@
 
         <div id="tab-config" class="page">
             <div class="card">
-                <div class="help-btn" onclick="showHelp('config')">?</div>
-                <h2>Automation Thresholds</h2>
+                <h2>AUTOMATION THRESHOLDS</h2>
+                <p style="color:#888; font-size:0.8rem; margin-bottom:20px;">
+                    Set target values for Auto Mode. Firmware will actuate relays to maintain these levels.
+                </p>
                 <div class="input-row">
-                    <label>Max Temperature (°C)</label>
-                    <input type="number" id="cfg-temp" placeholder="Fan triggers above this...">
+                    <label>TARGET TEMPERATURE (°C)</label>
+                    <input type="number" id="cfg-temp" placeholder="e.g. 25.0">
                 </div>
                 <div class="input-row">
-                    <label>Min Soil Moisture (%)</label>
-                    <input type="number" id="cfg-soil" placeholder="Water pump triggers below this...">
+                    <label>MIN SOIL MOISTURE (%)</label>
+                    <input type="number" id="cfg-soil" placeholder="e.g. 40">
                 </div>
-                <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
-                <div style="display: flex; gap: 10px;">
-                    <div class="input-row" style="flex:1;">
-                        <label>Target N</label> <input type="number" id="cfg-n">
-                    </div>
-                    <div class="input-row" style="flex:1;">
-                        <label>Target P</label> <input type="number" id="cfg-p">
-                    </div>
-                    <div class="input-row" style="flex:1;">
-                        <label>Target K</label> <input type="number" id="cfg-k">
-                    </div>
-                </div>
-                <button class="btn-full" onclick="iot.saveConfig()">UPLOAD TO CONTROLLER</button>
+                <button class="btn-full" onclick="iot.validateAndSend()">UPDATE FIRMWARE</button>
             </div>
         </div>
     </div>
@@ -303,132 +267,100 @@
         <div class="nav-btn" onclick="ui.switchTab('config', this)">
             <span>⚙️</span><div>CONFIG</div>
         </div>
-        <div class="nav-btn" onclick="gameApp.open()">
+        <div class="nav-btn" onclick="gameApp.init()">
             <span style="color:var(--pink);">👾</span><div style="color:var(--pink);">THREAT</div>
-        </div>
-    </div>
-
-    <div id="help-modal" class="modal-overlay">
-        <div class="modal-box">
-            <h2 id="help-title">Help</h2>
-            <p id="help-text" style="color: #ccc; line-height: 1.6;">...</p>
-            <button class="modal-close" onclick="document.getElementById('help-modal').style.display='none'">CLOSE</button>
         </div>
     </div>
 
     <div id="game-container">
         <canvas id="gc"></canvas>
         
-        <div class="g-overlay">
+        <div class="hud-overlay" id="hud" style="display:none;">
             <div class="hud-top">
-                <button class="game-btn-corner" onclick="gameApp.pause()">II PAUSE</button>
-                <div style="text-align: right;">
-                    <div style="font-family:'Orbitron'; color:var(--pink);">BOSS HEALTH</div>
-                    <div class="hp-bar-box" style="width: 200px;"><div class="hp-fill" id="hud-boss-hp" style="background:var(--pink); width:100%;"></div></div>
+                <div>
+                    <div class="hud-text" style="color:var(--green)">DRONE INTEGRITY</div>
+                    <div class="bar-wrap"><div class="bar-fill" id="hp-player" style="background:var(--green); width:100%"></div></div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="hud-text" style="color:var(--pink)">SYNTHETOS (BOSS)</div>
+                    <div class="bar-wrap"><div class="bar-fill" id="hp-boss" style="background:var(--pink); width:100%"></div></div>
                 </div>
             </div>
             
-            <div style="position:absolute; bottom: 20px; left: 20px; width: 200px;">
-                <div style="font-family:'Orbitron'; color:var(--green);">SHIELD</div>
-                <div class="hp-bar-box"><div class="hp-fill" id="hud-player-hp" style="background:var(--green); width:100%;"></div></div>
-            </div>
-
-            <div class="touch-controls">
-                <div class="stick-zone" id="joy-zone"><div class="stick-nub" id="joy-stick"></div></div>
-                <div class="fire-btn" id="btn-fire">FIRE</div>
+            <div class="touch-ui">
+                <div class="joy-area" id="joy-zone"><div class="joy-nub" id="joy-nub"></div></div>
+                <div class="btn-group">
+                    <div class="action-btn" id="btn-dash">DASH</div>
+                    <div class="action-btn" id="btn-fire">FIRE</div>
+                </div>
             </div>
         </div>
 
-        <div id="menu-start" class="g-menu">
-            <div class="g-title">SYNTHETOS DETECTED</div>
-            <p style="max-width: 400px; color: #ccc; margin-bottom: 30px;">
-                A digital parasite is draining the greenhouse power. Pilot the drone to neutralize it.
+        <div id="menu-start" class="game-menu">
+            <div class="gm-title">SYNTHETOS</div>
+            <p style="color:#ccc; max-width:400px; line-height:1.5;">
+                A biological anomaly has taken over the greenhouse controls.<br>
+                Pilot the defense drone to neutralize it.
             </p>
-            <div class="pc-hint">CONTROLS: WASD to Move | SPACE to Fire</div>
-            <div style="color:#888; margin-top:5px; font-size:0.8rem;">(Mobile: Use on-screen joystick)</div>
-            <br>
-            <button class="g-btn" onclick="gameApp.startMatch()">INITIATE DEFENSE</button>
-            <button class="g-btn danger" onclick="gameApp.close()">EXIT TO OS</button>
+            <div style="margin:20px; color:var(--cyan); font-family:'Orbitron'; font-size:0.9rem;">
+                PC: WASD to Move | SPACE to Fire | SHIFT to Dash<br>
+                MOBILE: Use Joystick | Tap buttons to Fire/Dash
+            </div>
+            <button class="gm-btn" onclick="gameApp.start()">ENGAGE</button>
+            <button class="gm-btn" style="border-color:#555; color:#555;" onclick="gameApp.close()">ABORT</button>
         </div>
 
-        <div id="menu-pause" class="g-menu" style="display:none;">
-            <div class="g-title">SYSTEM PAUSED</div>
-            <button class="g-btn" onclick="gameApp.resume()">RESUME</button>
-            <button class="g-btn danger" onclick="gameApp.close()">QUIT TO OS</button>
+        <div id="menu-over" class="game-menu" style="display:none;">
+            <div class="gm-title" id="over-msg">MISSION FAILED</div>
+            <button class="gm-btn" onclick="gameApp.start()">RETRY</button>
+            <button class="gm-btn" style="border-color:#555; color:#555;" onclick="gameApp.close()">EXIT</button>
         </div>
 
-        <div id="menu-over" class="g-menu" style="display:none;">
-            <div class="g-title" id="over-title">MISSION FAILED</div>
-            <button class="g-btn" onclick="gameApp.startMatch()">REBOOT SYSTEM</button>
-            <button class="g-btn danger" onclick="gameApp.close()">QUIT</button>
+        <div id="rotate-msg">
+            <div style="font-size:3rem;">⟳</div>
+            <div style="font-family:'Orbitron'; margin-top:10px;">PLEASE ROTATE DEVICE</div>
         </div>
     </div>
 
     <script>
-        // CONFIGURATION
-        const CONFIG = {
-            serverUrl: "https://your-render-app.onrender.com" // CHANGE THIS!
-        };
+        // --- CONFIGURATION ---
+        // REPLACE with your Render URL
+        const RENDER_URL = "https://your-render-app-name.onrender.com"; 
 
         // ============================================
-        // 1. UI & HELPERS
-        // ============================================
-        const ui = {
-            switchTab: (id, btn) => {
-                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                document.getElementById('tab-' + id).classList.add('active');
-                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-                if(btn) btn.classList.add('active');
-            }
-        };
-
-        function showHelp(page) {
-            const modal = document.getElementById('help-modal');
-            const title = document.getElementById('help-title');
-            const text = document.getElementById('help-text');
-            
-            modal.style.display = 'flex';
-            if(page === 'home') {
-                title.innerText = "Monitor Dashboard";
-                text.innerText = "View real-time sensor data from the Arduino. If the dot is green, you are connected. The camera feed updates automatically.";
-            } else if (page === 'manual') {
-                title.innerText = "Manual Override";
-                text.innerText = "1. Click 'AUTO' to switch to 'MANUAL' mode.\n2. Once enabled, click buttons to toggle devices physically.\n\nWARNING: Safety limits are off in Manual Mode.";
-            } else if (page === 'config') {
-                title.innerText = "Automation Settings";
-                text.innerText = "Set the trigger points for the automated system. The Arduino will use these values when in AUTO mode to turn fans or pumps on/off.";
-            }
-        }
-
-        // ============================================
-        // 2. IOT MANAGER (Socket.io)
+        // 1. IOT CONTROLLER
         // ============================================
         const iot = {
             socket: null,
             isManual: false,
             
             init: () => {
-                iot.socket = io(CONFIG.serverUrl, { transports: ['websocket', 'polling'] });
+                iot.socket = io(RENDER_URL, { transports: ['websocket', 'polling'] });
                 
-                // Connection Status
                 iot.socket.on('connect', () => {
                     document.getElementById('conn-text').innerText = "ONLINE";
                     document.getElementById('conn-dot').classList.add('online');
                 });
+                
                 iot.socket.on('disconnect', () => {
                     document.getElementById('conn-text').innerText = "OFFLINE";
                     document.getElementById('conn-dot').classList.remove('online');
                 });
 
-                // Sensor Data
                 iot.socket.on('sensor_data', (data) => {
-                    if(data.temp) document.getElementById('val-temp').innerText = data.temp.toFixed(1);
-                    if(data.hum) document.getElementById('val-hum').innerText = data.hum.toFixed(1);
-                    if(data.soil) document.getElementById('val-soil').innerText = data.soil;
-                    if(data.n !== undefined) document.getElementById('val-npk').innerText = `${data.n}-${data.p}-${data.k}`;
+                    if(data.temp !== undefined) document.getElementById('val-temp').innerText = data.temp.toFixed(1);
+                    if(data.hum !== undefined) document.getElementById('val-hum').innerText = data.hum.toFixed(1);
+                    
+                    // Handle Soil Mapping (Arduino sends 0-100)
+                    let s1 = data.soil1 || 0;
+                    let s2 = data.soil2 || 0;
+                    document.getElementById('val-soil').innerText = Math.max(s1, s2);
+
+                    // Handle NPK
+                    let n = data.n || 0, p = data.p || 0, k = data.k || 0;
+                    document.getElementById('val-npk').innerText = `${n} - ${p} - ${k}`;
                 });
 
-                // Camera
                 iot.socket.on('video_frame', (b64) => {
                     document.getElementById('cam-img').src = "data:image/jpeg;base64," + b64;
                 });
@@ -441,19 +373,17 @@
                 
                 btn.innerText = iot.isManual ? "MANUAL" : "AUTO";
                 btn.classList.toggle('mode-man', iot.isManual);
-                
-                panel.style.opacity = iot.isManual ? "1" : "0.5";
+                panel.style.opacity = iot.isManual ? "1" : "0.4";
                 panel.style.pointerEvents = iot.isManual ? "auto" : "none";
 
                 iot.socket.emit('command', { mode: iot.isManual ? 'manual' : 'auto' });
             },
 
-            toggleDevice: (devId) => {
+            toggleDevice: (dev) => {
                 if(!iot.isManual) return;
-                const btn = document.getElementById('btn-' + (devId === 'npk_pump' ? 'npk' : devId));
+                const btn = document.getElementById('btn-' + dev);
                 const isOn = btn.classList.contains('on');
                 
-                // Optimistic UI update
                 if(isOn) {
                     btn.classList.remove('on');
                     btn.innerText = "OFF";
@@ -461,319 +391,417 @@
                     btn.classList.add('on');
                     btn.innerText = "ON";
                 }
-
-                iot.socket.emit('command', { [devId]: !isOn });
+                // Send specific command matching Arduino Logic
+                iot.socket.emit('command', { [dev]: !isOn });
             },
 
-            saveConfig: () => {
-                const cfg = {
-                    set_temp: document.getElementById('cfg-temp').value,
-                    set_soil: document.getElementById('cfg-soil').value,
-                    set_n: document.getElementById('cfg-n').value,
-                    set_p: document.getElementById('cfg-p').value,
-                    set_k: document.getElementById('cfg-k').value
-                };
-                iot.socket.emit('command', cfg);
-                alert("Configuration sent to controller.");
+            validateAndSend: () => {
+                const tVal = document.getElementById('cfg-temp').value;
+                const sVal = document.getElementById('cfg-soil').value;
+
+                // Validation
+                if(tVal === "" || sVal === "") { alert("Please fill all fields."); return; }
+                const t = parseFloat(tVal);
+                const s = parseFloat(sVal);
+
+                if(isNaN(t) || t < 0 || t > 60) { alert("Invalid Temperature Range (0-60°C)."); return; }
+                if(isNaN(s) || s < 0 || s > 100) { alert("Invalid Soil Percentage (0-100%)."); return; }
+
+                // Send to Arduino (Matches Arduino logic: if (doc.containsKey("targetTemp")) ...)
+                iot.socket.emit('command', { 
+                    targetTemp: t,
+                    targetSoil: s // Note: Arduino code provided needs to be updated to use this, but we send it now safely.
+                });
+                alert("Settings uploaded to BioDome Controller.");
             }
         };
 
-        // Initialize IoT
+        const ui = {
+            switchTab: (id, btn) => {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById('tab-' + id).classList.add('active');
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                if(btn) btn.classList.add('active');
+            }
+        };
+
         iot.init();
 
-        // =======================================================
-        // 3. PROJECT SYNTHETOS (MODULAR MINIGAME ENGINE)
-        // =======================================================
-        // Edit this section to change game rules, graphics, or AI.
-        // =======================================================
-        
+        // ============================================
+        // 2. ADVANCED GAME ENGINE
+        // ============================================
         const gameApp = {
             canvas: document.getElementById('gc'),
             ctx: document.getElementById('gc').getContext('2d'),
-            isRunning: false,
-            isPaused: false,
+            running: false, loopId: null,
             width: 0, height: 0,
-            loopId: null,
-
-            // Entities
-            player: { x: 0, y: 0, r: 15, hp: 100, speed: 6, bullets: [] },
-            boss: { x: 0, y: 0, r: 50, hp: 1000, maxHp: 1000, timer: 0, projectiles: [] },
+            
+            // Game State
+            player: { x: 0, y: 0, r: 15, hp: 100, speed: 6, bullets: [], dashTime: 0, dashCool: 0 },
+            boss: { x: 0, y: 0, r: 60, hp: 1000, maxHp: 1000, state: 0, timer: 0, angle: 0, projectiles: [] },
             particles: [],
+            
+            // Input
+            keys: { w:false, a:false, s:false, d:false, space:false, shift:false },
+            joy: { active:false, dx:0, dy:0, id:null, sx:0, sy:0 },
 
-            // Input State
-            keys: { w: false, a: false, s: false, d: false, space: false },
-            joy: { active: false, dx: 0, dy: 0, id: null, startX: 0, startY: 0 },
-
-            open: () => {
+            init: () => {
                 document.getElementById('game-container').style.display = 'block';
                 document.querySelector('.nav-bar').style.display = 'none';
-                gameApp.resize();
-                // Show Start Menu
-                document.getElementById('menu-start').style.display = 'flex';
-                document.getElementById('menu-pause').style.display = 'none';
-                document.getElementById('menu-over').style.display = 'none';
+                gameApp.checkOrientation();
+                window.addEventListener('resize', gameApp.checkOrientation);
             },
 
-            close: () => {
-                gameApp.isRunning = false;
-                cancelAnimationFrame(gameApp.loopId);
-                document.getElementById('game-container').style.display = 'none';
-                document.querySelector('.nav-bar').style.display = 'flex';
-            },
-
-            resize: () => {
+            checkOrientation: () => {
                 gameApp.width = window.innerWidth;
                 gameApp.height = window.innerHeight;
                 gameApp.canvas.width = gameApp.width;
                 gameApp.canvas.height = gameApp.height;
+                
+                // Force Landscape on Mobile
+                const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+                const isPortrait = window.innerHeight > window.innerWidth;
+                
+                if(isMobile && isPortrait) {
+                    document.getElementById('rotate-msg').style.display = 'flex';
+                    if(gameApp.running) gameApp.running = false; // Pause if rotated wrong
+                } else {
+                    document.getElementById('rotate-msg').style.display = 'none';
+                    if(!gameApp.running && document.getElementById('menu-start').style.display === 'none' && document.getElementById('menu-over').style.display === 'none') {
+                        gameApp.running = true; 
+                        gameApp.loop();
+                    }
+                }
             },
 
-            startMatch: () => {
-                // Reset State
+            close: () => {
+                gameApp.running = false;
+                cancelAnimationFrame(gameApp.loopId);
+                document.getElementById('game-container').style.display = 'none';
+                document.querySelector('.nav-bar').style.display = 'flex';
+                window.removeEventListener('resize', gameApp.checkOrientation);
+            },
+
+            start: () => {
+                document.getElementById('menu-start').style.display = 'none';
+                document.getElementById('menu-over').style.display = 'none';
+                document.getElementById('hud').style.display = 'block';
+                
+                // Reset Entity State
                 gameApp.player.x = gameApp.width / 2;
-                gameApp.player.y = gameApp.height - 100;
+                gameApp.player.y = gameApp.height - 150;
                 gameApp.player.hp = 100;
                 gameApp.player.bullets = [];
+                gameApp.player.dashTime = 0;
                 
                 gameApp.boss.x = gameApp.width / 2;
-                gameApp.boss.y = 100;
+                gameApp.boss.y = 120;
                 gameApp.boss.hp = 1000;
                 gameApp.boss.projectiles = [];
+                gameApp.boss.state = 0;
                 gameApp.boss.timer = 0;
                 gameApp.particles = [];
 
-                // UI
-                document.getElementById('menu-start').style.display = 'none';
-                document.getElementById('menu-over').style.display = 'none';
-                document.getElementById('menu-pause').style.display = 'none';
+                gameApp.running = true;
+                gameApp.loop();
+            },
+
+            // --- DRAWING FUNCTIONS (COMPLEX SHAPES) ---
+            drawDrone: (ctx, p) => {
+                ctx.save();
+                ctx.translate(p.x, p.y);
                 
-                gameApp.isRunning = true;
-                gameApp.isPaused = false;
-                gameApp.loop();
+                // Ghost Trail if Dashing
+                if(p.dashTime > 0) {
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillStyle = '#00f3ff';
+                    ctx.beginPath(); ctx.arc(0,0, p.r+5, 0, Math.PI*2); ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                }
+
+                // Rotors
+                const time = Date.now() / 50;
+                ctx.strokeStyle = '#555';
+                for(let i=0; i<4; i++) {
+                    ctx.rotate(Math.PI/2);
+                    ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(25,0); ctx.stroke();
+                    // Blades
+                    ctx.save();
+                    ctx.translate(25, 0);
+                    ctx.rotate(time);
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.fillRect(-8, -2, 16, 4);
+                    ctx.restore();
+                }
+                
+                // Body
+                ctx.fillStyle = '#222';
+                ctx.beginPath(); ctx.arc(0,0, 12, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = p.dashTime > 0 ? '#fff' : '#00f3ff'; // Center light
+                ctx.beginPath(); ctx.arc(0,0, 6, 0, Math.PI*2); ctx.fill();
+                
+                ctx.restore();
             },
 
-            pause: () => {
-                if(!gameApp.isRunning) return;
-                gameApp.isPaused = true;
-                document.getElementById('menu-pause').style.display = 'flex';
-            },
+            drawSynthetos: (ctx, b) => {
+                ctx.save();
+                ctx.translate(b.x, b.y);
+                
+                // Pulse Effect
+                const pulse = Math.sin(Date.now()/200) * 5;
+                
+                // Outer Tentacles
+                ctx.strokeStyle = '#ff0055';
+                ctx.lineWidth = 3;
+                for(let i=0; i<8; i++) {
+                    ctx.rotate(Math.PI/4);
+                    ctx.beginPath();
+                    ctx.moveTo(0,0);
+                    ctx.quadraticCurveTo(30, 0, 50 + pulse, Math.sin(Date.now()/100 + i)*10);
+                    ctx.stroke();
+                }
 
-            resume: () => {
-                gameApp.isPaused = false;
-                document.getElementById('menu-pause').style.display = 'none';
-                gameApp.loop();
-            },
-
-            gameOver: (win) => {
-                gameApp.isRunning = false;
-                const title = document.getElementById('over-title');
-                title.innerText = win ? "THREAT ELIMINATED" : "SYSTEM FAILURE";
-                title.style.color = win ? "var(--green)" : "var(--pink)";
-                document.getElementById('menu-over').style.display = 'flex';
+                // Core
+                ctx.fillStyle = '#330011';
+                ctx.beginPath(); ctx.arc(0,0, 30 + pulse/2, 0, Math.PI*2); ctx.fill();
+                
+                // Eye
+                ctx.fillStyle = '#ff0055';
+                ctx.beginPath(); ctx.arc(Math.sin(Date.now()/300)*5, -5, 10, 0, Math.PI*2); ctx.fill();
+                
+                ctx.restore();
             },
 
             // --- GAME LOOP ---
             loop: () => {
-                if(!gameApp.isRunning || gameApp.isPaused) return;
-
-                const ctx = gameApp.ctx;
+                if(!gameApp.running) return;
                 const g = gameApp;
+                const ctx = g.ctx;
 
-                // 1. Clear & Trails
+                // Clear & Trails
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
                 ctx.fillRect(0,0, g.width, g.height);
 
-                // 2. Logic: Player Movement
-                // Keyboard Input
+                // --- 1. PLAYER LOGIC ---
                 let dx = 0, dy = 0;
-                if(g.keys.w) dy = -1;
-                if(g.keys.s) dy = 1;
-                if(g.keys.a) dx = -1;
-                if(g.keys.d) dx = 1;
-                // Joystick Input (overrides keyboard if active)
+                // Keys
+                if(g.keys.w) dy = -1; if(g.keys.s) dy = 1;
+                if(g.keys.a) dx = -1; if(g.keys.d) dx = 1;
+                // Joy
                 if(g.joy.active) { dx = g.joy.dx; dy = g.joy.dy; }
+                
+                // Normalize & Apply Speed
+                const mag = Math.hypot(dx, dy);
+                if(mag > 0 && !g.joy.active) { dx/=mag; dy/=mag; }
 
-                // Normalize vector
-                const mag = Math.sqrt(dx*dx + dy*dy);
-                if(mag > 0 && !g.joy.active) { dx/=mag; dy/=mag; } // Normalize keys only
+                // Dash Logic
+                if(g.player.dashCool > 0) g.player.dashCool--;
+                if(g.player.dashTime > 0) {
+                    g.player.dashTime--;
+                    dx *= 3; dy *= 3; // Speed boost
+                } else if ((g.keys.shift) && g.player.dashCool <= 0) {
+                    g.player.dashTime = 15; // 15 frames dash
+                    g.player.dashCool = 60; // 1 sec cooldown
+                }
 
                 g.player.x += dx * g.player.speed;
                 g.player.y += dy * g.player.speed;
                 
-                // Boundaries
-                g.player.x = Math.max(15, Math.min(g.width-15, g.player.x));
-                g.player.y = Math.max(15, Math.min(g.height-15, g.player.y));
+                // Clamp Bounds
+                g.player.x = Math.max(20, Math.min(g.width-20, g.player.x));
+                g.player.y = Math.max(20, Math.min(g.height-20, g.player.y));
 
-                // 3. Logic: Shooting
-                if(g.keys.space && g.player.bullets.length < 5) {
+                // Shoot
+                if((g.keys.space) && g.player.bullets.length < 10) {
                     g.player.bullets.push({x: g.player.x, y: g.player.y, vx: 0, vy: -15});
-                    g.keys.space = false; // Semi-auto
+                    g.keys.space = false; // Semi-auto on PC
                 }
 
-                // 4. Render Player
-                ctx.shadowBlur = 10; ctx.shadowColor = 'var(--green)';
-                ctx.fillStyle = '#39ff14';
-                ctx.beginPath(); ctx.arc(g.player.x, g.player.y, g.player.r, 0, Math.PI*2); ctx.fill();
-                ctx.shadowBlur = 0;
+                // --- 2. BOSS AI (7 ATTACKS) ---
+                g.boss.timer++;
+                // Move Boss
+                g.boss.x += Math.sin(g.boss.timer * 0.02) * 2;
+                
+                // State Machine
+                if(g.boss.timer % 100 === 0) {
+                    g.boss.state = Math.floor(Math.random() * 7); // Pick random attack
+                }
 
-                // 5. Player Bullets
-                ctx.fillStyle = '#ffff00';
-                for(let i = g.player.bullets.length-1; i>=0; i--) {
+                // Attack Logic
+                if(g.boss.timer % 10 === 0) { // Rate of fire
+                    const b = g.boss;
+                    switch(b.state) {
+                        case 0: // Spore Spiral
+                            b.angle += 0.5;
+                            b.projectiles.push({x:b.x, y:b.y, vx:Math.cos(b.angle)*5, vy:Math.sin(b.angle)*5, type:0});
+                            break;
+                        case 1: // Vine Lash (Fast Down)
+                            if(g.boss.timer % 20 === 0) 
+                                b.projectiles.push({x: g.player.x, y: 0, vx:0, vy:10, type:1, w:10, h:50}); 
+                            break;
+                        case 2: // Root Spike (Up from bottom)
+                            if(g.boss.timer % 30 === 0)
+                                b.projectiles.push({x: Math.random()*g.width, y: g.height, vx:0, vy:-7, type:2});
+                            break;
+                        case 3: // Pollen Cloud (Random Spread)
+                             b.projectiles.push({x:b.x, y:b.y, vx:(Math.random()-0.5)*8, vy:Math.random()*5, type:0});
+                             break;
+                        case 4: // Nutrient Drain (Homing)
+                            if(g.boss.timer % 40 === 0) b.projectiles.push({x:b.x, y:b.y, vx:0, vy:0, type:3}); // Logic handled in update
+                            break;
+                        case 5: // Beam (Wall)
+                            if(g.boss.timer % 50 === 0) {
+                                for(let i=0; i<g.width; i+=100) b.projectiles.push({x:i, y:0, vx:0, vy:4, type:0});
+                            }
+                            break;
+                        case 6: // Growth Surge (Explosion)
+                            for(let i=0; i<6; i++) 
+                                b.projectiles.push({x:b.x, y:b.y, vx:Math.cos(i)*6, vy:Math.sin(i)*6, type:0});
+                            break;
+                    }
+                }
+
+                // --- 3. RENDER & UPDATE OBJECTS ---
+                g.drawDrone(ctx, g.player);
+                g.drawSynthetos(ctx, g.boss);
+
+                // Player Bullets
+                ctx.fillStyle = '#ffd700';
+                for(let i=g.player.bullets.length-1; i>=0; i--) {
                     let b = g.player.bullets[i];
                     b.y += b.vy;
                     ctx.fillRect(b.x-2, b.y-5, 4, 10);
                     
-                    // Collision Boss
-                    let dist = Math.hypot(b.x - g.boss.x, b.y - g.boss.y);
-                    if(dist < g.boss.r) {
-                        g.boss.hp -= 15;
-                        g.player.bullets.splice(i, 1);
-                        // Particles
-                        for(let k=0; k<5; k++) g.particles.push({x: b.x, y: b.y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 10});
-                    } else if (b.y < 0) g.player.bullets.splice(i, 1);
+                    // Hit Boss
+                    if(Math.hypot(b.x - g.boss.x, b.y - g.boss.y) < g.boss.r) {
+                        g.boss.hp -= 10;
+                        g.particles.push({x:b.x, y:b.y, color:'#f05', vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10});
+                        g.player.bullets.splice(i,1);
+                    } else if (b.y < 0) g.player.bullets.splice(i,1);
                 }
-
-                // 6. Boss Logic
-                g.boss.timer++;
-                g.boss.x = (g.width/2) + Math.sin(g.boss.timer * 0.02) * (g.width * 0.3);
-                
-                // Boss Shoot
-                if(g.boss.timer % 50 === 0) {
-                    if(Math.random() > 0.5) {
-                         // Spread
-                         g.boss.projectiles.push({x: g.boss.x, y: g.boss.y, vx: -3, vy: 5});
-                         g.boss.projectiles.push({x: g.boss.x, y: g.boss.y, vx: 3, vy: 5});
-                         g.boss.projectiles.push({x: g.boss.x, y: g.boss.y, vx: 0, vy: 6});
-                    } else {
-                        // Aimed
-                        let angle = Math.atan2(g.player.y - g.boss.y, g.player.x - g.boss.x);
-                        g.boss.projectiles.push({x: g.boss.x, y: g.boss.y, vx: Math.cos(angle)*8, vy: Math.sin(angle)*8});
-                    }
-                }
-
-                // Render Boss
-                ctx.shadowBlur = 20; ctx.shadowColor = 'red';
-                ctx.fillStyle = g.boss.hp > 300 ? '#ff0055' : '#purple';
-                ctx.beginPath();
-                ctx.moveTo(g.boss.x, g.boss.y + 40);
-                ctx.lineTo(g.boss.x - 40, g.boss.y - 40);
-                ctx.lineTo(g.boss.x + 40, g.boss.y - 40);
-                ctx.fill();
-                ctx.shadowBlur = 0;
 
                 // Boss Projectiles
-                ctx.fillStyle = '#ff0055';
-                for(let i = g.boss.projectiles.length-1; i>=0; i--) {
+                for(let i=g.boss.projectiles.length-1; i>=0; i--) {
                     let p = g.boss.projectiles[i];
-                    p.x += p.vx; p.y += p.vy;
-                    ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
-
-                    // Hit Player
-                    if(Math.hypot(p.x - g.player.x, p.y - g.player.y) < g.player.r + 5) {
-                        g.player.hp -= 20;
-                        g.boss.projectiles.splice(i, 1);
+                    
+                    // Update Types
+                    if(p.type === 3) { // Homing
+                        let angle = Math.atan2(g.player.y - p.y, g.player.x - p.x);
+                        p.vx = Math.cos(angle) * 4; p.vy = Math.sin(angle) * 4;
                     }
-                    if(p.y > g.height) g.boss.projectiles.splice(i, 1);
+
+                    p.x += p.vx; p.y += p.vy;
+
+                    // Draw
+                    if(p.type === 1) { // Vine
+                        ctx.fillStyle = '#39ff14'; ctx.fillRect(p.x-5, p.y, 10, 40);
+                    } else { // Spore
+                        ctx.fillStyle = '#ff0055'; ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
+                    }
+
+                    // Collision Player
+                    let hitDist = p.type === 1 ? 20 : 10;
+                    if(Math.hypot(p.x - g.player.x, p.y - g.player.y) < hitDist + g.player.r) {
+                        if(g.player.dashTime === 0) { // INVULNERABLE IF DASHING
+                            g.player.hp -= 5;
+                            g.particles.push({x:g.player.x, y:g.player.y, color:'#0ff', vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10});
+                            g.boss.projectiles.splice(i,1);
+                        }
+                    }
+
+                    if(p.y > g.height || p.y < -100) g.boss.projectiles.splice(i,1);
                 }
 
-                // 7. Particles
-                ctx.fillStyle = 'white';
+                // Particles
                 for(let i=g.particles.length-1; i>=0; i--) {
                     let pt = g.particles[i];
-                    pt.x += pt.vx; pt.y += pt.vy;
-                    pt.life--;
-                    ctx.fillRect(pt.x, pt.y, 2, 2);
-                    if(pt.life <= 0) g.particles.splice(i, 1);
+                    pt.x += pt.vx; pt.y += pt.vy; pt.life = (pt.life || 10) - 1;
+                    ctx.fillStyle = pt.color; ctx.fillRect(pt.x, pt.y, 3, 3);
+                    if(pt.life <= 0) g.particles.splice(i,1);
                 }
 
-                // 8. HUD Update
-                document.getElementById('hud-player-hp').style.width = g.player.hp + "%";
-                document.getElementById('hud-boss-hp').style.width = (g.boss.hp/g.boss.maxHp * 100) + "%";
+                // UI Update
+                document.getElementById('hp-player').style.width = g.player.hp + "%";
+                document.getElementById('hp-boss').style.width = (g.boss.hp / g.boss.maxHp * 100) + "%";
 
-                // 9. Win/Lose Check
-                if(g.player.hp <= 0) g.gameOver(false);
-                if(g.boss.hp <= 0) g.gameOver(true);
+                // End Game
+                if(g.player.hp <= 0) {
+                    g.running = false;
+                    document.getElementById('hud').style.display = 'none';
+                    document.getElementById('menu-over').style.display = 'flex';
+                    document.getElementById('over-msg').innerText = "SYSTEM CRITICAL";
+                }
+                if(g.boss.hp <= 0) {
+                    g.running = false;
+                    document.getElementById('hud').style.display = 'none';
+                    document.getElementById('menu-over').style.display = 'flex';
+                    document.getElementById('over-msg').innerText = "THREAT NEUTRALIZED";
+                    document.getElementById('over-msg').style.color = "var(--cyan)";
+                }
 
                 g.loopId = requestAnimationFrame(g.loop);
             }
         };
 
-        // --- INPUT HANDLERS (Keyboard) ---
-        window.addEventListener('keydown', (e) => {
-            if(e.key === 'w') gameApp.keys.w = true;
-            if(e.key === 'a') gameApp.keys.a = true;
-            if(e.key === 's') gameApp.keys.s = true;
-            if(e.key === 'd') gameApp.keys.d = true;
-            if(e.key === ' ') {
-                if(gameApp.isRunning) gameApp.keys.space = true;
-                e.preventDefault(); // Stop scrolling
-            }
+        // --- INPUT HANDLING ---
+        // PC
+        window.addEventListener('keydown', e => {
+            if(e.key==='w') gameApp.keys.w=true;
+            if(e.key==='a') gameApp.keys.a=true;
+            if(e.key==='s') gameApp.keys.s=true;
+            if(e.key==='d') gameApp.keys.d=true;
+            if(e.key===' ') gameApp.keys.space=true;
+            if(e.key==='Shift') gameApp.keys.shift=true;
         });
-        window.addEventListener('keyup', (e) => {
-            if(e.key === 'w') gameApp.keys.w = false;
-            if(e.key === 'a') gameApp.keys.a = false;
-            if(e.key === 's') gameApp.keys.s = false;
-            if(e.key === 'd') gameApp.keys.d = false;
-            if(e.key === ' ') gameApp.keys.space = false;
-            if(e.key === 'Escape' && gameApp.isRunning) gameApp.pause();
+        window.addEventListener('keyup', e => {
+            if(e.key==='w') gameApp.keys.w=false;
+            if(e.key==='a') gameApp.keys.a=false;
+            if(e.key==='s') gameApp.keys.s=false;
+            if(e.key==='d') gameApp.keys.d=false;
+            if(e.key===' ') gameApp.keys.space=false;
+            if(e.key==='Shift') gameApp.keys.shift=false;
         });
 
-        // --- INPUT HANDLERS (Touch/Mobile) ---
+        // Mobile
         const joyZone = document.getElementById('joy-zone');
-        const stick = document.getElementById('joy-stick');
-        const fireBtn = document.getElementById('btn-fire');
-
-        // Joystick Logic
-        joyZone.addEventListener('touchstart', (e) => {
+        const joyNub = document.getElementById('joy-nub');
+        
+        joyZone.addEventListener('touchstart', e => {
             e.preventDefault();
             const t = e.changedTouches[0];
             gameApp.joy.id = t.identifier;
             gameApp.joy.active = true;
-            gameApp.joy.startX = t.clientX;
-            gameApp.joy.startY = t.clientY;
-            stick.style.transition = 'none';
-        }, {passive: false});
+            gameApp.joy.sx = t.clientX; gameApp.joy.sy = t.clientY;
+            joyNub.style.transition = 'none';
+        }, {passive:false});
 
-        joyZone.addEventListener('touchmove', (e) => {
+        joyZone.addEventListener('touchmove', e => {
             e.preventDefault();
             if(!gameApp.joy.active) return;
             for(let i=0; i<e.changedTouches.length; i++) {
                 if(e.changedTouches[i].identifier === gameApp.joy.id) {
                     const t = e.changedTouches[i];
-                    let dx = t.clientX - gameApp.joy.startX;
-                    let dy = t.clientY - gameApp.joy.startY;
-                    
-                    // Clamp visual
-                    const dist = Math.min(40, Math.hypot(dx, dy));
-                    const angle = Math.atan2(dy, dx);
-                    dx = Math.cos(angle) * dist;
-                    dy = Math.sin(angle) * dist;
-                    
-                    // Set Game Vector (-1 to 1)
-                    gameApp.joy.dx = dx / 40;
-                    gameApp.joy.dy = dy / 40;
-
-                    stick.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+                    let dx = t.clientX - gameApp.joy.sx;
+                    let dy = t.clientY - gameApp.joy.sy;
+                    const dist = Math.min(40, Math.hypot(dx,dy));
+                    const angle = Math.atan2(dy,dx);
+                    dx = Math.cos(angle)*dist; dy = Math.sin(angle)*dist;
+                    gameApp.joy.dx = dx/40; gameApp.joy.dy = dy/40;
+                    joyNub.style.transform = `translate(-50%,-50%) translate(${dx}px, ${dy}px)`;
                 }
             }
-        }, {passive: false});
+        }, {passive:false});
 
         const resetJoy = () => {
-            gameApp.joy.active = false;
-            gameApp.joy.dx = 0; gameApp.joy.dy = 0;
-            stick.style.transition = '0.2s';
-            stick.style.transform = `translate(-50%, -50%)`;
+            gameApp.joy.active = false; gameApp.joy.dx = 0; gameApp.joy.dy = 0;
+            joyNub.style.transition = '0.2s';
+            joyNub.style.transform = `translate(-50%,-50%)`;
         };
         joyZone.addEventListener('touchend', resetJoy);
-        joyZone.addEventListener('touchcancel', resetJoy);
-
-        // Fire Button
-        fireBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if(gameApp.isRunning) {
-                gameApp.player.bullets.push({x: gameApp.player.x, y: gameApp.player.y, vx: 0, vy: -15});
-            }
-        });
+        
+        // Mobile Actions
+        document.getElementById('btn-fire').addEventListener('touchstart', (e)=>{ e.preventDefault(); gameApp.keys.space=true; setTimeout(()=>gameApp.keys.space=false, 100); });
+        document.getElementById('btn-dash').addEventListener('touchstart', (e)=>{ e.preventDefault(); gameApp.keys.shift=true; setTimeout(()=>gameApp.keys.shift=false, 100); });
 
     </script>
 </body>
