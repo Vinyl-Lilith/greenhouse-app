@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BioCube OS v4.5 | Synthetos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>BioCube OS v5.0 | Synthetos</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
 
@@ -27,6 +27,7 @@
             color: white;
             margin: 0;
             height: 100vh;
+            width: 100vw;
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -374,12 +375,12 @@
         <div id="menu-start" class="g-menu">
             <div class="g-title">SYNTHETOS DETECTED</div>
             <p style="max-width: 400px; color: #ccc; margin-bottom: 30px;">
-                Intrusion signature: an adaptive virus is rewriting the core.<br>
-                Phase 1: Breaching the Citadel.<br>Phase 2: The Seraphim.
+                An adaptive hyper-virus is manifesting.<br>
+                Phase 1: The Dreadnought<br>Phase 2: The Singularity
             </p>
             <div class="pc-hint" style="margin-bottom:15px; border:1px solid #444; padding:10px;">
                 WASD: Move | SPACE: Fire<br>
-                <span style="color:var(--cyan)">HOLD SPACE: Charge Plasma Lance</span><br>
+                <span style="color:var(--cyan)">HOLD SPACE: Hyper-Lance (Heavy DMG)</span><br>
                 SHIFT: Dash
             </div>
             <button class="g-btn" onclick="gameApp.startMatch()">INITIATE DEFENSE</button>
@@ -394,7 +395,7 @@
 
         <div id="menu-win" class="g-menu" style="display:none;">
             <div class="g-title" style="color:var(--green)">THREAT ELIMINATED</div>
-            <p style="color:#ccc">System Integrity Restored. Greenhouse operations normal.</p>
+            <p style="color:#ccc">System Integrity Restored.</p>
             <button class="g-btn" onclick="gameApp.startMatch()">REBOOT SIMULATION</button>
             <button class="g-btn danger" onclick="gameApp.close()">RETURN TO OS</button>
         </div>
@@ -564,6 +565,7 @@
             phase: 0, 
             phaseTimer: 0,
             shake: 0,
+            globalTick: 0,
 
             // Entities
             player: { 
@@ -572,9 +574,9 @@
                 chargeTimer: 0, chargeMax: 60 // 1 sec to charge
             },
             boss: { 
-                x: 0, y: 0, r: 50, hp: 1000, maxHp: 1000, 
-                angle: 0, projectiles: [], attackTimer: 0,
-                introScale: 0, pulse: 0
+                x: 0, y: 0, r: 50, hp: 1500, maxHp: 1500, 
+                angle: 0, angle2: 0, projectiles: [], attackTimer: 0,
+                introScale: 0, pulse: 0, state: 'idle'
             },
             particles: [],
 
@@ -583,9 +585,12 @@
             joy: { active: false, dx: 0, dy: 0, id: null, startX: 0, startY: 0 },
 
             open: () => {
-                document.getElementById('game-container').style.display = 'block';
+                const container = document.getElementById('game-container');
+                container.style.display = 'block';
                 document.querySelector('.nav-bar').style.display = 'none';
+                
                 gameApp.resize();
+                
                 document.getElementById('menu-start').style.display = 'flex';
                 document.getElementById('menu-pause').style.display = 'none';
                 document.getElementById('menu-over').style.display = 'none';
@@ -595,12 +600,15 @@
             close: () => {
                 gameApp.isRunning = false;
                 if (gameApp.loopId) cancelAnimationFrame(gameApp.loopId);
+                // Exit Fullscreen if active
+                if(document.fullscreenElement) document.exitFullscreen().catch(e=>console.log(e));
+                
                 document.getElementById('game-container').style.display = 'none';
                 document.querySelector('.nav-bar').style.display = 'flex';
             },
 
             resize: () => {
-                // FIXED SCALING: Force canvas to window dimensions to solve mobile layout issues
+                // TRUE FULLSCREEN SCALING LOGIC
                 gameApp.width = window.innerWidth;
                 gameApp.height = window.innerHeight;
                 if (gameApp.canvas) {
@@ -610,6 +618,10 @@
             },
 
             startMatch: () => {
+                // Request Fullscreen on mobile
+                const el = document.getElementById('game-container');
+                if(el.requestFullscreen) el.requestFullscreen().catch(err => console.log("Fullscreen blocked", err));
+
                 gameApp.player.x = gameApp.width / 2;
                 gameApp.player.y = gameApp.height - 150;
                 gameApp.player.hp = 120;
@@ -619,15 +631,16 @@
 
                 gameApp.boss.x = gameApp.width / 2;
                 gameApp.boss.y = 150;
-                gameApp.boss.hp = 1000;
-                gameApp.boss.maxHp = 1000;
+                gameApp.boss.hp = 1500;
+                gameApp.boss.maxHp = 1500;
                 gameApp.boss.projectiles = [];
                 gameApp.boss.attackTimer = 0;
                 gameApp.boss.introScale = 0;
                 
                 gameApp.phase = 0; // Intro
-                gameApp.phaseTimer = 150;
+                gameApp.phaseTimer = 180;
                 gameApp.particles = [];
+                gameApp.globalTick = 0;
                 
                 document.querySelectorAll('.g-menu').forEach(m => m.style.display = 'none');
                 gameApp.isRunning = true;
@@ -659,27 +672,36 @@
                 }
             },
 
+            resetInputs: () => {
+                gameApp.keys.w = false; gameApp.keys.a = false;
+                gameApp.keys.s = false; gameApp.keys.d = false;
+                gameApp.keys.space = false; gameApp.keys.shift = false;
+                gameApp.joy.active = false;
+                gameApp.joy.dx = 0; gameApp.joy.dy = 0;
+                if(stick) stick.style.transform = `translate(-50%, -50%)`;
+                document.querySelectorAll('.fire-btn').forEach(b => b.classList.remove('active'));
+            },
+
             // --- DRAWING ---
-            drawPoly: (ctx, x, y, sides, radius, color, rotation = 0) => {
+            drawPoly: (ctx, x, y, sides, radius, color, rotation = 0, stroke=false) => {
                 ctx.beginPath();
                 for (let i = 0; i < sides; i++) {
                     const angle = rotation + (i * 2 * Math.PI / sides);
                     ctx.lineTo(x + radius * Math.cos(angle), y + radius * Math.sin(angle));
                 }
                 ctx.closePath();
-                ctx.fillStyle = color;
-                ctx.fill();
+                if(stroke) { ctx.strokeStyle = color; ctx.lineWidth=3; ctx.stroke(); }
+                else { ctx.fillStyle = color; ctx.fill(); }
             },
 
             loop: () => {
                 if(!gameApp.isRunning || gameApp.isPaused) return;
                 const ctx = gameApp.ctx;
                 const g = gameApp;
+                g.globalTick++;
 
-                // Watchdog for ghost touches: If no fingers, clear stick
-                if(g.joy.active && document.querySelectorAll(':active').length === 0 && !navigator.maxTouchPoints) {
-                     // Fallback check logic implemented in touch listeners
-                }
+                // Watchdog: If browser loses focus/visibility, kill inputs to prevent ghosting
+                if(document.hidden) g.resetInputs();
 
                 // Shake
                 let rx = 0, ry = 0;
@@ -696,20 +718,20 @@
                 ctx.fillStyle = '#050510';
                 ctx.fillRect(-10, -10, g.width+20, g.height+20);
                 
-                // Grid
-                ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+                // Animated Grid
+                ctx.strokeStyle = `rgba(0, 243, 255, ${0.05 + Math.sin(g.globalTick*0.05)*0.02})`;
                 ctx.lineWidth = 1;
                 ctx.beginPath();
+                let off = (g.globalTick*0.5) % 50;
                 for(let x=0; x<g.width; x+=50) { ctx.moveTo(x,0); ctx.lineTo(x,g.height); }
-                for(let y=0; y<g.height; y+=50) { ctx.moveTo(0,y); ctx.lineTo(g.width,y); }
+                for(let y=off; y<g.height; y+=50) { ctx.moveTo(0,y); ctx.lineTo(g.width,y); }
                 ctx.stroke();
 
                 // Stars
                 ctx.fillStyle = 'white';
-                for(let i=0;i<20;i++) ctx.fillRect((Date.now()/50 + i*50)%g.width, (i*30)%g.height, 2, 2);
+                for(let i=0;i<30;i++) ctx.fillRect((i*97 + g.globalTick*0.2)%g.width, (i*43)%g.height, Math.random()*2, Math.random()*2);
 
                 // --- PLAYER ---
-                // Dash
                 if(g.player.dashDuration > 0) {
                     g.player.dashDuration--;
                     g.player.invulnerable = true;
@@ -718,7 +740,6 @@
                 }
                 if(g.player.dashCooldown > 0) g.player.dashCooldown--;
 
-                // Move
                 let dx = 0, dy = 0;
                 if(g.keys.w) dy = -1; if(g.keys.s) dy = 1;
                 if(g.keys.a) dx = -1; if(g.keys.d) dx = 1;
@@ -729,7 +750,7 @@
                     g.spawnExplosion(g.player.x, g.player.y, '#ffd700', 10);
                 }
 
-                let speed = g.player.dashDuration > 0 ? 18 : g.player.speed;
+                let speed = g.player.dashDuration > 0 ? 20 : g.player.speed;
                 const mag = Math.sqrt(dx*dx + dy*dy);
                 if(mag > 0 && !g.joy.active) { dx/=mag; dy/=mag; }
                 g.player.x += dx * speed;
@@ -737,31 +758,28 @@
                 g.player.x = Math.max(20, Math.min(g.width-20, g.player.x));
                 g.player.y = Math.max(20, Math.min(g.height-20, g.player.y));
 
-                // CHARGE LOGIC
+                // CHARGE LOGIC (BUFFED)
                 if(g.keys.space) {
                     if(g.player.chargeTimer < g.player.chargeMax) {
                         g.player.chargeTimer++;
-                        // Gather particles
-                        if(g.player.chargeTimer % 5 === 0) {
+                        if(g.player.chargeTimer % 4 === 0) { // Gather effect
+                            const a = Math.random()*Math.PI*2;
+                            const r = 30;
                             g.particles.push({
-                                x: g.player.x + (Math.random()-0.5)*40,
-                                y: g.player.y + (Math.random()-0.5)*40,
-                                vx: (g.player.x - (g.player.x + (Math.random()-0.5)*40))*0.1,
-                                vy: (g.player.y - (g.player.y + (Math.random()-0.5)*40))*0.1,
-                                life: 10, color: '#00f3ff'
+                                x: g.player.x + Math.cos(a)*r, y: g.player.y + Math.sin(a)*r,
+                                vx: -Math.cos(a)*2, vy: -Math.sin(a)*2,
+                                life: 15, color: '#00f3ff'
                             });
                         }
                     }
                 } else {
-                    // Release
                     if(g.player.chargeTimer >= g.player.chargeMax) {
-                        // FIRE CHARGE SHOT
-                        g.player.bullets.push({x: g.player.x, y: g.player.y-20, vx: 0, vy: -15, type: 'charge'});
-                        g.shake = 5;
-                        g.spawnExplosion(g.player.x, g.player.y-20, '#00f3ff', 20, 2);
+                        // HYPER LANCE (120 DMG)
+                        g.player.bullets.push({x: g.player.x, y: g.player.y-25, vx: 0, vy: -18, type: 'charge'});
+                        g.shake = 10;
+                        g.spawnExplosion(g.player.x, g.player.y-25, '#00f3ff', 30, 3);
                     } else if (g.player.chargeTimer > 0) {
-                        // FIRE NORMAL
-                        if(g.player.bullets.length < 12)
+                        if(g.player.bullets.length < 15)
                             g.player.bullets.push({x: g.player.x, y: g.player.y-10, vx: 0, vy: -20, type: 'normal'});
                     }
                     g.player.chargeTimer = 0;
@@ -771,21 +789,14 @@
                 ctx.save();
                 ctx.translate(g.player.x, g.player.y);
                 if(g.player.invulnerable) ctx.globalAlpha = 0.5;
-                
-                // Charge Aura
-                if(g.player.chargeTimer > 10) {
-                    const pct = g.player.chargeTimer / g.player.chargeMax;
-                    ctx.strokeStyle = `rgba(0, 243, 255, ${pct})`;
-                    ctx.lineWidth = 2;
-                    ctx.beginPath(); ctx.arc(0, 0, 20 + Math.sin(Date.now()*0.02)*2, 0, Math.PI*2); ctx.stroke();
+                if(g.player.chargeTimer > 15) {
+                    ctx.beginPath(); ctx.strokeStyle = `rgba(0,243,255,${g.player.chargeTimer/60})`; 
+                    ctx.arc(0,0,25,0,Math.PI*2); ctx.stroke();
                 }
-
-                // Drone Body
                 ctx.fillStyle = '#fff';
                 ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(12, 10); ctx.lineTo(0, 5); ctx.lineTo(-12, 10); ctx.fill();
-                // Engine
                 ctx.fillStyle = g.player.dashDuration > 0 ? '#ffd700' : '#00f3ff';
-                ctx.beginPath(); ctx.moveTo(-5, 10); ctx.lineTo(0, 25 + Math.random()*10); ctx.lineTo(5, 10); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(-6, 10); ctx.lineTo(0, 25 + Math.random()*8); ctx.lineTo(6, 10); ctx.fill();
                 ctx.restore();
 
                 // Player Bullets
@@ -794,185 +805,190 @@
                     b.y += b.vy;
                     
                     if(b.type === 'charge') {
-                        // Large Beam visual
-                        ctx.fillStyle = '#ccffff';
-                        ctx.shadowBlur = 15; ctx.shadowColor = '#00f3ff';
-                        ctx.fillRect(b.x-15, b.y, 30, 60);
+                        ctx.fillStyle = '#e0ffff';
+                        ctx.shadowBlur = 20; ctx.shadowColor = '#00f3ff';
+                        ctx.fillRect(b.x-20, b.y, 40, 80);
                         ctx.shadowBlur = 0;
                     } else {
                         ctx.fillStyle = '#00f3ff';
-                        ctx.fillRect(b.x-2, b.y-10, 4, 15);
+                        ctx.fillRect(b.x-3, b.y-10, 6, 18);
                     }
 
-                    // Collision
                     let dist = Math.hypot(b.x - g.boss.x, b.y - g.boss.y);
-                    if((g.phase === 1 || g.phase === 3) && dist < g.boss.r + 20) {
-                        const dmg = b.type === 'charge' ? 50 : 5;
+                    if((g.phase === 1 || g.phase === 3) && dist < g.boss.r + 30) {
+                        const dmg = b.type === 'charge' ? 120 : 6; // MASSIVE BUFF
                         g.boss.hp -= dmg;
                         g.player.bullets.splice(i, 1);
-                        g.spawnExplosion(b.x, b.y, b.type==='charge'?'#fff':'#00f3ff', b.type==='charge'?10:2);
-                        if(b.type === 'charge') g.shake = 8;
+                        g.spawnExplosion(b.x, b.y, b.type==='charge'?'#fff':'#00f3ff', b.type==='charge'?15:3);
+                        if(b.type === 'charge') g.shake = 15;
                         continue;
                     }
                     if(b.y < -100) g.player.bullets.splice(i, 1);
                 }
 
-                // --- BOSS LOGIC ---
+                // --- BOSS LOGIC & VISUALS (REMODELED) ---
                 g.boss.pulse += 0.05;
                 g.boss.angle += 0.01;
+                g.boss.angle2 -= 0.02;
 
                 // PHASE 0: INTRO
                 if(g.phase === 0) {
                     document.getElementById('boss-name').innerText = "SYSTEM ALERT";
                     g.phaseTimer--;
-                    g.boss.introScale += 0.02;
+                    g.boss.introScale += 0.01;
                     if(g.boss.introScale > 1) g.boss.introScale = 1;
                     
-                    // Draw Wireframe growing
                     ctx.save();
                     ctx.translate(g.boss.x, g.boss.y);
                     ctx.scale(g.boss.introScale, g.boss.introScale);
-                    ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 2;
-                    ctx.beginPath(); ctx.arc(0,0, g.boss.r, 0, Math.PI*2); ctx.stroke();
+                    // Wireframe construction
+                    ctx.strokeStyle = `rgba(255, 0, 85, ${Math.random()})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(0,0, g.boss.r*1.5, 0, Math.PI*2); ctx.stroke();
+                    g.drawPoly(ctx, 0, 0, 6, g.boss.r, '#222', g.boss.angle);
                     ctx.restore();
 
                     if(g.phaseTimer <= 0) {
-                        g.phase = 1; document.getElementById('boss-name').innerText = "PHASE 1: THE CITADEL";
-                        g.spawnExplosion(g.boss.x, g.boss.y, '#ff0055', 30);
+                        g.phase = 1; document.getElementById('boss-name').innerText = "PHASE 1: THE DREADNOUGHT";
+                        g.spawnExplosion(g.boss.x, g.boss.y, '#ff0055', 40);
                     }
                 }
 
-                // PHASE 1: ROTATING CITADEL (Shielded)
+                // PHASE 1: THE DREADNOUGHT (Rotating Fortress)
                 else if (g.phase === 1) {
                     g.boss.attackTimer++;
-                    g.boss.x = (g.width/2) + Math.sin(Date.now()*0.0008) * 120; // Sways
+                    g.boss.x = (g.width/2) + Math.sin(g.globalTick*0.01) * 100;
 
-                    // Draw Citadel
+                    // Complex Visuals
                     ctx.save();
                     ctx.translate(g.boss.x, g.boss.y);
+                    
+                    // Outer Shield Ring
                     ctx.rotate(g.boss.angle);
-                    // Core
-                    g.drawPoly(ctx, 0, 0, 6, 40, '#333');
-                    ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 3; ctx.stroke();
-                    // Orbiting Shield Plates
-                    for(let i=0; i<3; i++) {
-                        ctx.save();
-                        ctx.rotate((i * Math.PI*2/3));
-                        ctx.translate(60, 0);
-                        ctx.fillStyle = '#222';
-                        ctx.fillRect(-10, -30, 20, 60); // Plate
-                        ctx.strokeStyle = '#ff0055'; ctx.strokeRect(-10, -30, 20, 60);
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = '#444';
+                    ctx.beginPath(); ctx.arc(0,0,70,0,Math.PI*2); ctx.stroke();
+                    // Turrets on ring
+                    for(let k=0; k<4; k++) {
+                        ctx.save(); ctx.rotate(k*Math.PI/2); ctx.translate(70,0);
+                        ctx.fillStyle='#555'; ctx.fillRect(-10,-10,20,20);
+                        ctx.fillStyle='#ff0055'; ctx.fillRect(5,-4,10,8); // barrel
                         ctx.restore();
                     }
+
+                    // Inner Core
+                    ctx.rotate(-g.boss.angle*2);
+                    g.drawPoly(ctx, 0, 0, 6, 40, '#222', 0);
+                    ctx.fillStyle = `rgb(${150 + Math.sin(g.boss.pulse)*100}, 0, 50)`;
+                    ctx.beginPath(); ctx.arc(0,0, 20, 0, Math.PI*2); ctx.fill();
                     ctx.restore();
 
-                    // ATTACKS (Phase 1)
-                    if(g.boss.attackTimer % 90 === 0) {
-                        const pat = Math.floor(Math.random() * 3);
-                        if(pat === 0) { // Spinning Shards
-                            for(let i=0; i<8; i++) {
-                                const a = g.boss.angle + (i * Math.PI/4);
-                                g.shootBoss(g.boss.x, g.boss.y, Math.cos(a)*5, Math.sin(a)*5, 'shard');
+                    // ATTACKS PHASE 1 (More complex)
+                    if(g.boss.attackTimer % 70 === 0) {
+                        const pat = Math.floor(Math.random() * 4);
+                        if(pat === 0) { // Turret Volley
+                            for(let k=0; k<4; k++) {
+                                const a = g.boss.angle + k*Math.PI/2;
+                                g.shootBoss(g.boss.x + Math.cos(a)*70, g.boss.y + Math.sin(a)*70, Math.cos(a)*5, Math.sin(a)*5, 'bolt');
                             }
-                        } else if (pat === 1) { // Wave Pulse
-                            for(let i=-2; i<=2; i++) {
-                                g.shootBoss(g.boss.x, g.boss.y, i*2, 4, 'orb');
+                        } else if (pat === 1) { // Spiral Shotgun
+                            for(let i=0; i<12; i++) {
+                                const a = i * 0.5 + g.boss.angle;
+                                g.shootBoss(g.boss.x, g.boss.y, Math.cos(a)*4, Math.sin(a)*4, 'orb');
                             }
-                        } else { // Aimed Tri-shot
-                            let ang = Math.atan2(g.player.y - g.boss.y, g.player.x - g.boss.x);
-                            g.shootBoss(g.boss.x, g.boss.y, Math.cos(ang)*7, Math.sin(ang)*7, 'shard');
-                            g.shootBoss(g.boss.x, g.boss.y, Math.cos(ang+0.2)*6, Math.sin(ang+0.2)*6, 'shard');
-                            g.shootBoss(g.boss.x, g.boss.y, Math.cos(ang-0.2)*6, Math.sin(ang-0.2)*6, 'shard');
+                        } else if (pat === 2) { // Mine Layer
+                            g.shootBoss(g.boss.x, g.boss.y, (Math.random()-0.5)*10, Math.random()*5, 'mine');
+                            g.shootBoss(g.boss.x, g.boss.y, (Math.random()-0.5)*10, Math.random()*5, 'mine');
+                        } else { // Laser Sweep (Particles)
+                            for(let i=-5; i<=5; i++) {
+                                g.shootBoss(g.boss.x + i*15, g.boss.y + 60, 0, 6, 'beam');
+                            }
                         }
                     }
 
-                    if(g.boss.hp <= 500) {
-                        g.phase = 2; g.phaseTimer = 180;
-                        g.boss.projectiles = []; // Clear screen
-                        g.spawnExplosion(g.boss.x, g.boss.y, '#fff', 50, 3);
-                        g.shake = 30;
+                    if(g.boss.hp <= 750) {
+                        g.phase = 2; g.phaseTimer = 200;
+                        g.boss.projectiles = [];
+                        g.spawnExplosion(g.boss.x, g.boss.y, '#fff', 60, 4);
+                        g.shake = 40;
                     }
                 }
 
-                // PHASE 2: TRANSFORMATION
+                // PHASE 2: TRANSFORMATION (Glitchy)
                 else if (g.phase === 2) {
                     g.phaseTimer--;
                     g.player.invulnerable = true;
                     g.boss.x = g.width/2; g.boss.y = 150;
-                    document.getElementById('boss-name').innerText = "RECONFIGURING...";
+                    document.getElementById('boss-name').innerText = "CRITICAL ERROR...";
                     
-                    // Glitch effect
-                    const s = 1 + Math.random()*0.5;
+                    const s = 1 + Math.random();
                     ctx.save();
-                    ctx.translate(g.boss.x, g.boss.y);
-                    ctx.fillStyle = Math.random()>0.5 ? '#ff0055' : '#fff';
-                    if(g.phaseTimer % 5 === 0) ctx.fillRect(-50*s, -50*s, 100*s, 100*s);
+                    ctx.translate(g.boss.x + (Math.random()-0.5)*20, g.boss.y + (Math.random()-0.5)*20);
+                    ctx.fillStyle = Math.random()>0.5 ? '#00f3ff' : '#ff0055';
+                    ctx.fillRect(-40*s, -40*s, 80*s, 80*s);
                     ctx.restore();
 
                     if(g.phaseTimer <= 0) {
                         g.phase = 3;
-                        document.getElementById('boss-name').innerText = "PHASE 2: THE SERAPHIM";
+                        document.getElementById('boss-name').innerText = "PHASE 2: THE SINGULARITY";
                         g.player.invulnerable = false;
                         g.boss.attackTimer = 0;
                     }
                 }
 
-                // PHASE 3: THE SERAPHIM (Unshackled)
+                // PHASE 3: THE SINGULARITY (Biblically Accurate/Abstract)
                 else if (g.phase === 3) {
                     g.boss.attackTimer++;
-                    
-                    // Move erratically
-                    g.boss.x += Math.sin(Date.now()*0.002)*2;
-                    g.boss.y = 150 + Math.sin(Date.now()*0.005)*30;
+                    g.boss.x = (g.width/2) + Math.cos(g.globalTick*0.02) * 150;
+                    g.boss.y = 150 + Math.sin(g.globalTick*0.03) * 50;
 
-                    // Draw Seraphim (Eye + Geometric Wings)
                     ctx.save();
                     ctx.translate(g.boss.x, g.boss.y);
                     
-                    // Wings (Breathing)
-                    const wingScale = 1 + Math.sin(g.boss.pulse)*0.1;
+                    // Spinning Rings
                     ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 2;
-                    for(let i=0; i<4; i++) {
-                        ctx.save();
-                        ctx.rotate((Math.PI/2)*i + g.boss.angle*0.2);
-                        ctx.beginPath();
-                        ctx.moveTo(0,0); ctx.lineTo(60*wingScale, -40*wingScale); ctx.lineTo(80*wingScale, 0);
-                        ctx.stroke();
-                        ctx.restore();
-                    }
-
-                    // Eye
-                    ctx.fillStyle = '#111';
-                    ctx.beginPath(); ctx.arc(0,0, 30, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#ff0055';
-                    ctx.beginPath(); ctx.arc(Math.sin(Date.now()*0.01)*5, 0, 10, 0, Math.PI*2); ctx.fill(); // Pupil
+                    
+                    // Ring 1 (Vertical spin)
+                    ctx.save(); ctx.scale(1, Math.sin(g.globalTick*0.05)); 
+                    ctx.beginPath(); ctx.arc(0,0,80,0,Math.PI*2); ctx.stroke();
                     ctx.restore();
 
-                    // ATTACKS (Phase 2 - Chaotic)
-                    if(g.boss.attackTimer % 50 === 0) {
-                        const pat = Math.floor(Math.random() * 4);
-                        if(pat === 0) { // Flower Bloom (Orbs)
-                            for(let i=0; i<12; i++) {
-                                const a = i * (Math.PI*2/12);
-                                g.shootBoss(g.boss.x, g.boss.y, Math.cos(a)*4, Math.sin(a)*4, 'orb');
+                    // Ring 2 (Horizontal spin)
+                    ctx.save(); ctx.scale(Math.cos(g.globalTick*0.04), 1);
+                    ctx.beginPath(); ctx.arc(0,0,80,0,Math.PI*2); ctx.stroke();
+                    ctx.restore();
+
+                    // Ring 3 (Z spin)
+                    ctx.rotate(g.globalTick*0.02);
+                    g.drawPoly(ctx, 0, 0, 8, 60, '#ff3355', 0, true);
+
+                    // Central Eye
+                    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0,0,25,0,Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(Math.cos(g.globalTick*0.1)*5, Math.sin(g.globalTick*0.1)*5, 10, 0, Math.PI*2); ctx.fill();
+                    ctx.restore();
+
+                    // ATTACKS PHASE 2 (Chaotic & Hard)
+                    if(g.boss.attackTimer % 55 === 0) {
+                        const pat = Math.floor(Math.random() * 5);
+                        if(pat === 0) { // Void Rain (Top down)
+                            for(let i=0; i<8; i++) g.shootBoss(Math.random()*g.width, -20, 0, 5 + Math.random()*5, 'void');
+                        } else if (pat === 1) { // Gravity Wells (Homing)
+                            g.shootBoss(g.boss.x, g.boss.y, 3, 3, 'gravity');
+                            g.shootBoss(g.boss.x, g.boss.y, -3, 3, 'gravity');
+                        } else if (pat === 2) { // Reality Tear (Giant Beam)
+                            g.shootBoss(g.boss.x, g.boss.y, 0, 15, 'tear');
+                        } else if (pat === 3) { // Expanding Star
+                            for(let k=0; k<16; k++) {
+                                const a = k * Math.PI/8;
+                                g.shootBoss(g.boss.x, g.boss.y, Math.cos(a)*6, Math.sin(a)*6, 'orb');
                             }
-                        } else if (pat === 1) { // Rain of Shards
-                            for(let i=0; i<5; i++) {
-                                g.shootBoss(Math.random()*g.width, 0, 0, 8 + Math.random()*4, 'shard');
-                            }
-                        } else if (pat === 2) { // Homing Swarm
-                            g.shootBoss(g.boss.x, g.boss.y, 3, 3, 'homing');
-                            g.shootBoss(g.boss.x, g.boss.y, -3, 3, 'homing');
-                        } else { // X-Slash
-                             g.shootBoss(g.boss.x, g.boss.y, 6, 6, 'wave');
-                             g.shootBoss(g.boss.x, g.boss.y, -6, 6, 'wave');
-                             g.shootBoss(g.boss.x, g.boss.y, 6, -6, 'wave');
-                             g.shootBoss(g.boss.x, g.boss.y, -6, -6, 'wave');
+                        } else { // Chaos Spray
+                            for(let k=0; k<10; k++) g.shootBoss(g.boss.x, g.boss.y, (Math.random()-0.5)*15, (Math.random()-0.5)*15, 'bolt');
                         }
                     }
 
                     if(g.boss.hp <= 0) {
-                        g.spawnExplosion(g.boss.x, g.boss.y, '#ff0055', 100, 3);
+                        g.spawnExplosion(g.boss.x, g.boss.y, '#ff0055', 150, 4);
                         document.getElementById('menu-win').style.display = 'flex';
                         g.isRunning = false;
                     }
@@ -982,35 +998,51 @@
                 for(let i=g.boss.projectiles.length-1; i>=0; i--) {
                     let p = g.boss.projectiles[i];
                     
-                    if(p.type === 'homing') {
+                    if(p.type === 'gravity') {
+                        // Homing
                         let ang = Math.atan2(g.player.y - p.y, g.player.x - p.x);
-                        p.vx += Math.cos(ang)*0.2; p.vy += Math.sin(ang)*0.2;
-                        const max = 5; 
-                        const v = Math.hypot(p.vx, p.vy);
-                        if(v>max) { p.vx = (p.vx/v)*max; p.vy = (p.vy/v)*max; }
+                        p.vx += Math.cos(ang)*0.15; p.vy += Math.sin(ang)*0.15;
+                        let v = Math.hypot(p.vx, p.vy);
+                        if(v>6) { p.vx=(p.vx/v)*6; p.vy=(p.vy/v)*6; }
+                    } else if (p.type === 'mine') {
+                        // Slow down and stop
+                        p.vx *= 0.95; p.vy *= 0.95;
+                        p.life = (p.life || 200) - 1;
+                        if(p.life < 0) {
+                             g.boss.projectiles.splice(i, 1);
+                             g.spawnExplosion(p.x, p.y, '#ff5500', 10);
+                             continue;
+                        }
                     }
+
                     p.x += p.vx; p.y += p.vy;
 
-                    // Draw based on type
-                    ctx.fillStyle = '#ff3355';
-                    if(p.type === 'shard') {
-                        // Triangle pointing velocity
-                        let rot = Math.atan2(p.vy, p.vx);
-                        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(rot);
-                        ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(-5, 5); ctx.lineTo(-5, -5); ctx.fill();
-                        ctx.restore();
-                    } else if (p.type === 'orb' || p.type === 'homing') {
-                        ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
-                    } else { // Wave
-                        ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.fill();
+                    // Draw
+                    if(p.type === 'bolt') {
+                        ctx.fillStyle = '#ff3355'; ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI*2); ctx.fill();
+                    } else if (p.type === 'orb') {
+                        ctx.fillStyle = '#ff00aa'; ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI*2); ctx.fill();
+                    } else if (p.type === 'mine') {
+                        ctx.fillStyle = (Math.floor(g.globalTick/10)%2===0) ? '#ff5500' : '#440000';
+                        ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI*2); ctx.fill();
+                    } else if (p.type === 'gravity') {
+                        ctx.fillStyle = '#aa00ff'; ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.fill();
+                    } else if (p.type === 'void') {
+                        ctx.fillStyle = '#fff'; ctx.fillRect(p.x-3, p.y-10, 6, 20);
+                    } else if (p.type === 'tear' || p.type === 'beam') {
+                        ctx.fillStyle = '#ff0055'; ctx.fillRect(p.x-10, p.y-20, 20, 60);
                     }
 
-                    // Player Hit
-                    if(Math.hypot(p.x - g.player.x, p.y - g.player.y) < g.player.r + 5) {
+                    // Hit
+                    let r = 10;
+                    if(p.type === 'tear' || p.type === 'mine') r = 20;
+                    
+                    if(Math.hypot(p.x - g.player.x, p.y - g.player.y) < g.player.r + r) {
                         if(!g.player.invulnerable) {
-                            g.player.hp -= 15; g.shake = 15;
+                            g.player.hp -= (p.type==='tear'||p.type==='mine') ? 25 : 10;
+                            g.shake = 15;
                             g.spawnExplosion(g.player.x, g.player.y, '#39ff14', 10);
-                            g.boss.projectiles.splice(i, 1);
+                            if(p.type !== 'tear') g.boss.projectiles.splice(i, 1);
                         }
                     } else if(p.y > g.height+50 || p.y < -50 || p.x < -50 || p.x > g.width+50) {
                         g.boss.projectiles.splice(i, 1);
@@ -1027,13 +1059,12 @@
                     if(pt.life <= 0) g.particles.splice(i, 1);
                 }
 
-                // HUD
+                // HUD Update
                 document.getElementById('hud-player-hp').style.width = Math.max(0, (g.player.hp/120)*100) + "%";
-                document.getElementById('hud-boss-hp').style.width = Math.max(0, (g.boss.hp/1000)*100) + "%";
+                document.getElementById('hud-boss-hp').style.width = Math.max(0, (g.boss.hp/1500)*100) + "%";
                 const dO = document.getElementById('dash-overlay');
                 g.player.dashCooldown <= 0 ? dO.classList.add('visible') : dO.classList.remove('visible');
                 
-                // Charge UI (Mobile)
                 const cFill = document.getElementById('charge-bar-fill');
                 if(cFill) cFill.style.width = (g.player.chargeTimer / g.player.chargeMax)*100 + "%";
 
@@ -1051,7 +1082,13 @@
             }
         };
 
-        // --- INPUTS (Fixing Ghost Touches & Adding Charge) ---
+        // --- INPUTS ---
+        // Tab Switching / Blur Protection (Prevents Stuck Keys)
+        window.addEventListener('blur', gameApp.resetInputs);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) gameApp.resetInputs();
+        });
+
         window.addEventListener('keydown', (e) => {
             if(e.key === 'w') gameApp.keys.w = true;
             if(e.key === 'a') gameApp.keys.a = true;
@@ -1081,12 +1118,7 @@
         
         // WATCHDOG: Global touch end to prevent stuck keys
         document.body.addEventListener('touchend', (e) => {
-            if(e.touches.length === 0) {
-                gameApp.keys.space = false;
-                gameApp.keys.shift = false;
-                gameApp.joy.active = false;
-                stick.style.transform = `translate(-50%, -50%)`;
-            }
+            if(e.touches.length === 0) gameApp.resetInputs();
         });
 
         if(joyZone){
@@ -1131,7 +1163,7 @@
             joyZone.addEventListener('touchcancel', resetJoy);
         }
 
-        // Button Logic (Refined for Charge)
+        // Button Logic
         function makeButtonTouchSafe(el, btnKey) {
             if(!el) return;
             el.addEventListener('touchstart', (e) => {
@@ -1140,6 +1172,11 @@
                 el.classList.add('active');
             }, {passive:false});
             el.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                gameApp.keys[btnKey] = false;
+                el.classList.remove('active');
+            }, {passive:false});
+            el.addEventListener('touchcancel', (e) => {
                 e.preventDefault();
                 gameApp.keys[btnKey] = false;
                 el.classList.remove('active');
