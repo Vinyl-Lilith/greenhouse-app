@@ -2,855 +2,960 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Biodome Controller v1.2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BioDome OS v4.0 | Synthetos</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+    
     <style>
         /* --- CORE VARIABLES & RESET --- */
         :root {
-            --bg-color: #1a1a1a;
-            --panel-color: #252525;
-            --text-main: #ffffff;
-            --text-dim: #b0b0b0;
-            --accent: #00e676; /* Green for Biodome */
-            --accent-hover: #00c853;
-            --danger: #ff5252;
-            --nav-height: 60px;
+            --cyan: #00f3ff;
+            --pink: #ff0055;
+            --green: #39ff14;
+            --yellow: #ffd700;
+            --dark: #050510;
+            --panel: rgba(20, 20, 30, 0.85);
+            --border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-        
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
+
         body {
+            font-family: 'Rajdhani', sans-serif;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
+            color: white;
             margin: 0;
-            font-family: 'Courier New', Courier, monospace; /* Retro/Terminal feel */
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            overflow: hidden; /* Prevent body scroll, handle in main */
+            height: 100vh;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            height: 100vh;
         }
 
-        /* --- NAVIGATION --- */
-        header {
-            height: var(--nav-height);
-            background: #000;
-            border-bottom: 2px solid var(--accent);
+        /* --- UI COMPONENTS --- */
+        .status-bar {
+            height: 60px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            padding: 0 1rem;
-            z-index: 100;
+            align-items: center;
+            padding: 0 20px;
+            background: rgba(0,0,0,0.8);
+            border-bottom: 1px solid #333;
+            z-index: 50;
         }
+        .brand { font-family: 'Orbitron'; letter-spacing: 2px; color: var(--cyan); }
+        .status-ind { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; }
+        .dot { width: 8px; height: 8px; background: #555; border-radius: 50%; box-shadow: 0 0 5px #555; transition: 0.3s; }
+        .dot.online { background: var(--green); box-shadow: 0 0 8px var(--green); }
 
-        h1 { font-size: 1.2rem; margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; }
+        #app-viewport { flex: 1; position: relative; overflow-y: auto; padding-bottom: 80px; }
 
-        nav { display: flex; gap: 10px; }
-
-        .nav-btn {
-            background: transparent;
-            border: 1px solid var(--text-dim);
-            color: var(--text-dim);
-            padding: 8px 12px;
-            cursor: pointer;
-            font-family: inherit;
-            font-weight: bold;
-            transition: 0.2s;
-        }
-
-        .nav-btn.active, .nav-btn:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-            box-shadow: 0 0 8px rgba(0, 230, 118, 0.3);
-        }
-
-        /* --- MAIN CONTENT AREA --- */
-        main {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            position: relative;
-        }
-
-        .page {
-            display: none; /* Hidden by default */
-            max-width: 800px;
-            margin: 0 auto;
-            animation: fadeIn 0.3s ease-in;
-        }
-
+        .page { display: none; padding: 20px; max-width: 800px; margin: 0 auto; animation: slideUp 0.3s ease; }
         .page.active { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: 0; } }
-
-        /* --- CARDS & PANELS --- */
-        .panel {
-            background: var(--panel-color);
-            border: 1px solid #333;
+        .card {
+            background: var(--panel);
+            backdrop-filter: blur(8px);
+            border: var(--border);
+            border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             position: relative;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
         }
-
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #444;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-
+        h2 { margin: 0 0 15px 0; color: var(--cyan); font-family: 'Orbitron'; font-size: 1.2rem; border-bottom: 1px solid #333; padding-bottom: 8px; }
+        
         .help-btn {
-            background: #333;
-            color: var(--accent);
-            border: 1px solid var(--accent);
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 22px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 14px;
+            position: absolute; top: 15px; right: 15px; width: 24px; height: 24px;
+            border: 1px solid #666; border-radius: 50%; text-align: center; line-height: 22px;
+            color: #aaa; cursor: pointer; font-size: 0.9rem; font-family: 'Orbitron';
         }
+        .help-btn:hover { color: white; border-color: white; }
 
-        /* --- SENSOR GRID --- */
-        .readings-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-        }
-
-        .reading-box {
-            background: #111;
-            padding: 15px;
-            text-align: center;
-            border: 1px solid #333;
-        }
-
-        .reading-val { font-size: 1.5rem; color: var(--accent); margin: 5px 0; }
-        .reading-label { font-size: 0.8rem; color: #888; }
-
-        /* --- INPUTS --- */
-        .input-group { margin-bottom: 15px; }
-        label { display: block; color: #aaa; margin-bottom: 5px; font-size: 0.9rem; }
-        input[type="number"] {
-            width: 100%;
-            background: #111;
-            border: 1px solid #444;
-            color: white;
-            padding: 10px;
-            font-family: inherit;
-        }
-        input:focus { outline: none; border-color: var(--accent); }
-
-        .action-btn {
-            width: 100%;
-            background: var(--accent);
-            color: black;
-            border: none;
-            padding: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .action-btn:active { transform: scale(0.98); }
+        .sensor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .sensor-box { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; text-align: center; }
+        .s-val { font-size: 1.8rem; font-weight: 700; color: #fff; display: block; }
+        .s-lbl { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
 
         /* --- CAMERA STYLES --- */
-        .cam-wrapper {
-            width: 100%;
-            background: #000;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border: 2px solid #333;
-            position: relative;
+        .cam-feed { 
+            width: 100%; height: 200px; background: #000; border: 1px solid #333; 
+            position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;
+            cursor: pointer; /* Hint that it's clickable */
+        }
+        .cam-feed img { 
+            width: 100%; height: 100%; object-fit: cover; 
+            transform: rotate(180deg); /* FEATURE 2: Flip Video Only */
+        }
+        .rec-dot { 
+            position: absolute; top: 10px; left: 10px; color: red; font-size: 0.8rem; 
+            font-weight: bold; animation: blink 1s infinite; z-index: 10;
+        }
+        .cam-hint {
+            position: absolute; bottom: 5px; right: 10px; font-size: 0.7rem; color: rgba(255,255,255,0.5); pointer-events: none;
         }
 
-        /* ROTATED AND INVERTED AS REQUESTED */
-        #video-feed {
-            width: 100%;
-            height: auto;
-            transform: rotate(180deg); /* Physical fix */
-            transition: all 0.3s ease;
-            cursor: zoom-in;
+        /* Fullscreen Cam Modal */
+        #cam-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; z-index: 3000; justify-content: center; align-items: center;
         }
+        #cam-modal img { width: 100%; height: 100%; object-fit: contain; transform: rotate(180deg); }
+        #cam-close { position: absolute; top: 20px; right: 20px; font-size: 2rem; color: white; cursor: pointer; z-index: 3001; }
 
-        /* EXPANDED MODE */
-        #video-feed.expanded {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 9999;
-            object-fit: contain;
-            background: black;
-            transform: rotate(180deg);
-            cursor: zoom-out;
+        /* --- CONTROLS --- */
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; }
+        .btn-toggle {
+            background: #222; color: #666; border: 1px solid #444; padding: 8px 25px;
+            font-family: 'Orbitron'; cursor: pointer; border-radius: 4px; transition: 0.2s;
         }
+        .btn-toggle.on { background: var(--cyan); color: #000; box-shadow: 0 0 15px var(--cyan); border-color: var(--cyan); }
+        .btn-toggle.mode-man { background: var(--pink); color: #fff; box-shadow: 0 0 15px var(--pink); border-color: var(--pink); }
 
-        /* --- MINIGAME STYLES --- */
-        #game-wrapper {
-            position: relative;
-            width: 100%;
-            height: 400px;
-            background: #111;
-            border: 2px solid var(--accent);
-            overflow: hidden;
+        .input-row { margin-bottom: 15px; }
+        .input-row label { display: block; color: #aaa; margin-bottom: 5px; font-size: 0.9rem; }
+        .input-row input {
+            width: 100%; background: #111; border: 1px solid #444; color: var(--cyan); padding: 12px;
+            font-family: 'Orbitron'; border-radius: 4px;
         }
+        .btn-full { width: 100%; padding: 15px; background: #228b22; color: white; border: none; font-weight: bold; font-family: 'Orbitron'; cursor: pointer; border-radius: 4px; }
 
-        canvas { display: block; width: 100%; height: 100%; }
-
-        .game-ui-layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* Let clicks pass through to canvas/buttons */
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 10px;
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
+            background: #0a0a0f; border-top: 1px solid #333;
+            display: flex; justify-content: space-around; align-items: center; z-index: 100;
         }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; color: #555; cursor: pointer; flex: 1; }
+        .nav-btn span { font-size: 1.4rem; margin-bottom: 4px; }
+        .nav-btn div { font-size: 0.7rem; letter-spacing: 1px; }
+        .nav-btn.active { color: var(--cyan); text-shadow: 0 0 10px rgba(0,243,255,0.5); }
 
-        .game-header { display: flex; justify-content: space-between; width: 100%; pointer-events: auto; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 2000;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-box { background: #1a1a20; border: 1px solid #444; padding: 30px; border-radius: 8px; max-width: 90%; width: 400px; }
+        .modal-close { margin-top: 20px; background: #333; color: white; border: none; padding: 10px 20px; width: 100%; cursor: pointer; }
+
+        /* --- GAME UI LAYERS --- */
+        #game-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; display: none; }
+        canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+
+        .g-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
         
-        .score-board { background: rgba(0,0,0,0.7); padding: 5px 10px; border: 1px solid var(--accent); }
+        /* HUD */
+        .hud-top { padding: 20px; display: flex; justify-content: space-between; width: 100%; }
+        .hp-bar-box { width: 100%; height: 12px; background: #333; border: 1px solid #555; margin-top: 5px; overflow: hidden;}
+        .hp-fill { height: 100%; transition: width 0.1s; }
+        .game-btn-corner { pointer-events: auto; background: rgba(0,0,0,0.5); border: 1px solid #555; color: white; padding: 8px 15px; font-family: 'Orbitron'; cursor: pointer; }
 
-        .pause-btn {
-            pointer-events: auto;
-            background: #333;
-            border: 1px solid white;
-            color: white;
-            padding: 5px 15px;
-            cursor: pointer;
-            text-transform: uppercase;
-            font-size: 0.8rem;
+        .g-menu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 10; pointer-events: auto;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+        }
+        .g-title { font-size: 3rem; font-family: 'Orbitron'; color: var(--pink); margin-bottom: 20px; text-shadow: 2px 2px var(--cyan); }
+        .g-btn {
+            background: transparent; border: 2px solid var(--cyan); color: var(--cyan);
+            padding: 15px 40px; font-family: 'Orbitron'; font-size: 1.2rem; margin: 10px;
+            cursor: pointer; transition: 0.2s; width: 250px;
+        }
+        .g-btn:hover { background: var(--cyan); color: black; }
+        .g-btn.danger { border-color: var(--pink); color: var(--pink); }
+        .g-btn.danger:hover { background: var(--pink); color: black; }
+
+        /* DEVICE CONTROLS */
+        .touch-controls {
+            position: absolute; bottom: 20px; width: 100%; height: 150px;
+            pointer-events: none; padding: 0 40px; display: none; justify-content: space-between;
+        }
+        .rotate-msg { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:6000; align-items:center; justify-content:center; color: var(--cyan); font-family: 'Orbitron'; }
+
+        @media (pointer: coarse) {
+            .touch-controls { display: flex; }
+            .pc-hint { display: none !important; }
+            /* Force Landscape Warning */
+            @media (orientation: portrait) {
+                .rotate-msg { display: flex !important; }
+            }
+        }
+        @media (pointer: fine) {
+            .touch-controls { display: none; }
+            .pc-hint { display: block; color: #888; margin-top: 20px; font-family: 'Orbitron'; }
         }
 
-        .overlay-msg {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            background: rgba(0,0,0,0.85);
-            padding: 20px;
-            border: 1px solid var(--accent);
-            pointer-events: auto;
+        .stick-zone { width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); pointer-events: auto; position: relative; }
+        .stick-nub { width: 50px; height: 50px; background: rgba(255,255,255,0.5); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        
+        .action-btns { display: flex; gap: 15px; pointer-events: auto; }
+        .fire-btn {
+            width: 90px; height: 90px; border-radius: 50%; background: rgba(255, 0, 85, 0.2);
+            border: 2px solid var(--pink); color: var(--pink); display: flex; align-items: center; justify-content: center;
+            font-family: 'Orbitron'; font-weight: bold; pointer-events: auto;
         }
+        .fire-btn.dash { border-color: var(--yellow); color: var(--yellow); background: rgba(255, 215, 0, 0.2); font-size: 0.8rem; }
+        .fire-btn:active { background: white; color: black; }
 
-        /* --- STATUS BAR --- */
-        footer {
-            background: #111;
-            padding: 5px 10px;
-            font-size: 0.75rem;
-            text-align: right;
-            border-top: 1px solid #333;
-            color: #555;
-        }
-
-        /* --- HELP MODAL --- */
-        .modal-backdrop {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 5000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background: var(--panel-color);
-            padding: 20px;
-            max-width: 90%;
-            width: 400px;
-            border: 1px solid var(--accent);
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-        }
+        @keyframes blink { 50% { opacity: 0; } }
+        
+        /* Dash Cooldown Indicator */
+        #dash-overlay { position: absolute; bottom: 80px; right: 140px; color: var(--yellow); font-family: 'Orbitron'; font-size: 0.8rem; opacity: 0; transition: 0.2s;}
+        #dash-overlay.visible { opacity: 1; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>BioDome v1.2</h1>
-        <nav>
-            <button class="nav-btn active" onclick="navTo('home')">HOME</button>
-            <button class="nav-btn" onclick="navTo('config')">CONFIG</button>
-            <button class="nav-btn" onclick="navTo('cam')">CAM</button>
-            <button class="nav-btn" onclick="navTo('game')">GAME</button>
-        </nav>
-    </header>
+    <div id="cam-modal">
+        <div id="cam-close" onclick="closeCamModal()">×</div>
+        <img id="cam-modal-img" src="">
+    </div>
 
-    <main>
-        <div id="home" class="page active">
-            <div class="panel">
-                <div class="panel-header">
-                    <span>SENSOR ARRAY</span>
-                    <div class="help-btn" onclick="showHelp('home')">?</div>
+    <div class="status-bar">
+        <div class="brand">BIODOME OS</div>
+        <div class="status-ind">
+            <span id="conn-text">OFFLINE</span>
+            <div class="dot" id="conn-dot"></div>
+        </div>
+    </div>
+
+    <div id="app-viewport">
+        <div id="tab-home" class="page active">
+            <div class="card">
+                <div class="help-btn" onclick="showHelp('home')">?</div>
+                <h2>Live Monitoring</h2>
+                <div class="cam-feed" ondblclick="openCamModal()">
+                    <div class="rec-dot">LIVE</div>
+                    <img id="cam-img" src="" alt="NO SIGNAL">
+                    <div class="cam-hint">Double-tap for Fullscreen</div>
                 </div>
-                <div class="readings-grid">
-                    <div class="reading-box">
-                        <div class="reading-label">TEMP (°C)</div>
-                        <div class="reading-val" id="disp-temp">--</div>
+            </div>
+            <div class="sensor-grid">
+                <div class="sensor-box">
+                    <span class="s-val"><span id="val-temp">--</span>°C</span>
+                    <span class="s-lbl">Air Temp</span>
+                </div>
+                <div class="sensor-box">
+                    <span class="s-val"><span id="val-hum">--</span>%</span>
+                    <span class="s-lbl">Humidity</span>
+                </div>
+                <div class="sensor-box">
+                    <span class="s-val"><span id="val-soil">--</span>%</span>
+                    <span class="s-lbl">Soil Moisture</span>
+                </div>
+                <div class="sensor-box">
+                    <span class="s-val" id="val-npk" style="font-size: 1.2rem;">- - -</span>
+                    <span class="s-lbl">N - P - K</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-manual" class="page">
+            <div class="card">
+                <div class="help-btn" onclick="showHelp('manual')">?</div>
+                <h2>System Override</h2>
+                <div class="toggle-row">
+                    <span>OPERATION MODE</span>
+                    <button id="btn-mode" class="btn-toggle" onclick="iot.toggleMode()">AUTO</button>
+                </div>
+                <div id="manual-controls" style="opacity: 0.5; pointer-events: none; transition: 0.3s;">
+                    <div class="toggle-row">
+                        <span>Exhaust Fan</span>
+                        <button id="btn-fan" class="btn-toggle" onclick="iot.toggleDevice('exhaust')">OFF</button>
                     </div>
-                    <div class="reading-box">
-                        <div class="reading-label">HUMIDITY (%)</div>
-                        <div class="reading-val" id="disp-hum">--</div>
+                    <div class="toggle-row">
+                        <span>Peltier Cooling</span>
+                        <button id="btn-peltier" class="btn-toggle" onclick="iot.toggleDevice('peltier')">OFF</button>
                     </div>
-                    <div class="reading-box">
-                        <div class="reading-label">SOIL (%)</div>
-                        <div class="reading-val" id="disp-soil">--</div>
+                    <div class="toggle-row">
+                        <span>Water Pump</span>
+                        <button id="btn-pump" class="btn-toggle" onclick="iot.toggleDevice('pump_w')">OFF</button>
                     </div>
-                    <div class="reading-box">
-                        <div class="reading-label">NITROGEN</div>
-                        <div class="reading-val" id="disp-n">--</div>
-                    </div>
-                    <div class="reading-box">
-                        <div class="reading-label">PHOSPHORUS</div>
-                        <div class="reading-val" id="disp-p">--</div>
-                    </div>
-                    <div class="reading-box">
-                        <div class="reading-label">POTASSIUM</div>
-                        <div class="reading-val" id="disp-k">--</div>
+                    <div class="toggle-row">
+                        <span>NPK Nutrient Pump</span>
+                        <button id="btn-npk" class="btn-toggle" onclick="iot.toggleDevice('pump_n')">OFF</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="config" class="page">
-            <div class="panel">
-                <div class="panel-header">
-                    <span>AUTOMATION THRESHOLDS</span>
-                    <div class="help-btn" onclick="showHelp('config')">?</div>
+        <div id="tab-config" class="page">
+            <div class="card">
+                <div class="help-btn" onclick="showHelp('config')">?</div>
+                <h2>Automation Thresholds</h2>
+                <div class="input-row">
+                    <label>Target Temperature (°C)</label>
+                    <input type="number" id="cfg-temp" placeholder="Controls Cooling & Fan">
                 </div>
-                <p style="font-size: 0.8rem; color: #888; margin-bottom: 20px;">
-                    Set the minimum values. If sensors drop below these numbers, the system will auto-correct.
-                </p>
-
-                <div class="input-group">
-                    <label>Min Temp (°C)</label>
-                    <input type="number" id="in-temp" placeholder="24">
-                </div>
-                <div class="input-group">
-                    <label>Min Humidity (%)</label>
-                    <input type="number" id="in-hum" placeholder="60">
-                </div>
-                <div class="input-group">
+                <div class="input-row">
                     <label>Min Soil Moisture (%)</label>
-                    <input type="number" id="in-soil" placeholder="40">
+                    <input type="number" id="cfg-soil" placeholder="Triggers Water Pump">
                 </div>
-
-                <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
-
-                <div class="input-group">
-                    <label>Min Nitrogen (mg/kg)</label>
-                    <input type="number" id="in-n" placeholder="100">
-                </div>
-                <div class="input-group">
-                    <label>Min Phosphorus (mg/kg)</label>
-                    <input type="number" id="in-p" placeholder="50">
-                </div>
-                <div class="input-group">
-                    <label>Min Potassium (mg/kg)</label>
-                    <input type="number" id="in-k" placeholder="100">
-                </div>
-
-                <button class="action-btn" onclick="saveConfig()">UPLOAD SETTINGS</button>
-                <div id="config-msg" style="text-align: center; margin-top: 10px; font-size: 0.8rem;"></div>
+                <button class="btn-full" onclick="iot.saveConfig()">UPLOAD TO CONTROLLER</button>
             </div>
         </div>
+    </div>
 
-        <div id="cam" class="page">
-            <div class="panel">
-                <div class="panel-header">
-                    <span>INTERNAL FEED</span>
-                    <div class="help-btn" onclick="showHelp('cam')">?</div>
-                </div>
-                <div class="cam-wrapper">
-                    <img id="video-feed" src="" alt="Camera Offline" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMjIyIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZpbGw9IiM1NTUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5PIFNJR05BTDwvdGV4dD48L3N2Zz4='">
-                </div>
-                <p style="text-align: center; font-size: 0.75rem; color: #666; margin-top: 10px;">
-                    Double-tap video to enlarge. Feed rotated 180° for physical mount correction.
-                </p>
-            </div>
+    <div class="nav-bar">
+        <div class="nav-btn active" onclick="ui.switchTab('home', this)"><span>🏠</span><div>HOME</div></div>
+        <div class="nav-btn" onclick="ui.switchTab('manual', this)"><span>🎛️</span><div>MANUAL</div></div>
+        <div class="nav-btn" onclick="ui.switchTab('config', this)"><span>⚙️</span><div>CONFIG</div></div>
+        <div class="nav-btn" onclick="gameApp.open()"><span style="color:var(--pink);">👾</span><div style="color:var(--pink);">THREAT</div></div>
+    </div>
+
+    <div id="help-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h2 id="help-title">Help</h2>
+            <p id="help-text" style="color: #ccc; line-height: 1.6;">...</p>
+            <button class="modal-close" onclick="document.getElementById('help-modal').style.display='none'">CLOSE</button>
         </div>
+    </div>
 
-        <div id="game" class="page">
-            <div class="panel" style="padding: 0; border: none;">
-                <div id="game-wrapper">
-                    <canvas id="cvs"></canvas>
-                    
-                    <div class="game-ui-layer">
-                        <div class="game-header">
-                            <span class="score-board" id="score">000000</span>
-                            <button class="pause-btn" onclick="togglePause()">PAUSE</button>
-                        </div>
-                    </div>
+    <div id="game-container">
+        <div class="rotate-msg">⚠️ ROTATE DEVICE TO LANDSCAPE ⚠️</div>
+        
+        <canvas id="gc"></canvas>
+        
+        <div class="g-overlay">
+            <div class="hud-top">
+                <button class="game-btn-corner" onclick="gameApp.pause()">II PAUSE</button>
+                <div style="text-align: right;">
+                    <div style="font-family:'Orbitron'; color:var(--pink);" id="boss-name">CORE: DORMANT</div>
+                    <div class="hp-bar-box" style="width: 200px;"><div class="hp-fill" id="hud-boss-hp" style="background:var(--pink); width:100%;"></div></div>
+                </div>
+            </div>
+            
+            <div style="position:absolute; bottom: 20px; left: 20px; width: 200px;">
+                <div style="font-family:'Orbitron'; color:var(--green);">SHIELD INTEGRITY</div>
+                <div class="hp-bar-box"><div class="hp-fill" id="hud-player-hp" style="background:var(--green); width:100%;"></div></div>
+                <div id="dash-overlay">DASH READY</div>
+            </div>
 
-                    <div id="game-overlay" class="overlay-msg">
-                        <h2 style="margin: 0 0 10px 0; color: var(--accent);">DEFEND THE DOME</h2>
-                        <p id="game-subtext" style="font-size: 0.8rem; color: #ccc;">WASD / ARROWS to Move<br>SPACE to Shoot</p>
-                        <button class="action-btn" style="margin-top: 15px;" onclick="startGame()">INITIATE SYSTEM</button>
-                    </div>
+            <div class="touch-controls">
+                <div class="stick-zone" id="joy-zone"><div class="stick-nub" id="joy-stick"></div></div>
+                <div class="action-btns">
+                    <div class="fire-btn dash" id="btn-dash">DASH</div>
+                    <div class="fire-btn" id="btn-fire">FIRE</div>
                 </div>
             </div>
         </div>
 
-    </main>
+        <div id="menu-start" class="g-menu">
+            <div class="g-title">SYNTHETOS DETECTED</div>
+            <p style="max-width: 400px; color: #ccc; margin-bottom: 30px;">
+                The central AI core has been corrupted. Pilot the Vector Drone to neutralize the anomaly.
+            </p>
+            <div class="pc-hint">WASD: Move | SPACE: Fire | SHIFT: Dash</div>
+            <button class="g-btn" onclick="gameApp.startMatch()">INITIATE DEFENSE</button>
+            <button class="g-btn danger" onclick="gameApp.close()">EXIT TO OS</button>
+        </div>
 
-    <footer>
-        STATUS: <span id="status-txt">Waiting for connection...</span>
-    </footer>
+        <div id="menu-pause" class="g-menu" style="display:none;">
+            <div class="g-title">SYSTEM PAUSED</div>
+            <button class="g-btn" onclick="gameApp.resume()">RESUME</button>
+            <button class="g-btn danger" onclick="gameApp.close()">QUIT TO OS</button>
+        </div>
 
-    <div id="help-modal" class="modal-backdrop" onclick="this.style.display='none'">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 style="color:var(--accent); margin-top:0;" id="help-title">Info</h3>
-            <p id="help-body" style="line-height: 1.5; font-size: 0.9rem;">...</p>
-            <button class="action-btn" onclick="document.getElementById('help-modal').style.display='none'">CLOSE</button>
+        <div id="menu-win" class="g-menu" style="display:none;">
+            <div class="g-title" style="color:var(--green)">THREAT ELIMINATED</div>
+            <p style="color:#ccc">System Integrity Restored. Greenhouse operations normal.</p>
+            <button class="g-btn" onclick="gameApp.startMatch()">REBOOT SIMULATION</button>
+            <button class="g-btn danger" onclick="gameApp.close()">RETURN TO OS</button>
+        </div>
+
+        <div id="menu-over" class="g-menu" style="display:none;">
+            <div class="g-title" style="color:var(--pink)">CRITICAL FAILURE</div>
+            <button class="g-btn" onclick="gameApp.startMatch()">RETRY MISSION</button>
+            <button class="g-btn danger" onclick="gameApp.close()">QUIT</button>
         </div>
     </div>
 
     <script>
-        /**
-         * BIODOME CONTROLLER V1.2
-         * - Redesigned Input Handling for Bug-Free Movement
-         * - Added Security Validation (No PINs, Type Checks)
-         * - Stabilized Graphics for Dizziness Prevention
-         */
-
-        // --- GLOBAL CONFIGURATION ---
-        // Change this to your ESP32/Arduino IP Address
-        const ARDUINO_URL = "http://192.168.4.1"; 
-
-        // --- NAVIGATION LOGIC ---
-        function navTo(pageId) {
-            // Hide all pages
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            // Deactivate nav buttons
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            
-            // Activate selected
-            document.getElementById(pageId).classList.add('active');
-            
-            // Find button by index mapping (Home=0, Config=1, Cam=2, Game=3)
-            const map = { 'home': 0, 'config': 1, 'cam': 2, 'game': 3 };
-            document.querySelectorAll('.nav-btn')[map[pageId]].classList.add('active');
-
-            // Game Logic: Auto-pause if leaving game tab
-            if (pageId !== 'game' && game.state === 'PLAYING') {
-                togglePause();
-            }
-        }
-
-        // --- HELP SYSTEM ---
-        const helpData = {
-            'home': { t: 'Sensor Dashboard', b: 'Displays real-time telemetry from the Biodome. Data refreshes automatically. If values show "--", check the Arduino connection.' },
-            'config': { t: 'System Thresholds', b: 'Input the minimum safe values for your plants. If sensors read below these numbers, the Arduino will activate pumps or heaters automatically. ' },
-            'cam': { t: 'Visual Feed', b: 'Live stream from inside the dome. Double-click the image to enter full-screen mode for detailed inspection.' }
+        const CONFIG = {
+            serverUrl: "https://your-render-app.onrender.com" // CHANGE THIS
         };
 
-        function showHelp(key) {
-            document.getElementById('help-title').innerText = helpData[key].t;
-            document.getElementById('help-body').innerText = helpData[key].b;
-            document.getElementById('help-modal').style.display = 'flex';
-        }
-
-        // --- DATA & FAILSAFES ---
-        const state = {
-            connected: false,
-            failCount: 0
+        // --- 1. UI HELPERS ---
+        const ui = {
+            switchTab: (id, btn) => {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById('tab-' + id).classList.add('active');
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                if(btn) btn.classList.add('active');
+            }
         };
 
-        function updateStatus(msg, isError = false) {
-            const el = document.getElementById('status-txt');
-            el.innerText = msg;
-            el.style.color = isError ? '#ff5252' : '#00e676';
-        }
-
-        // Polling function with Failsafe Timeout
-        async function fetchData() {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
-
-            try {
-                const res = await fetch(`${ARDUINO_URL}/status`, { signal: controller.signal });
-                clearTimeout(timeoutId);
-                
-                if (!res.ok) throw new Error("HTTP Error");
-                
-                const data = await res.json();
-                
-                // Populate Dashboard with validation checks
-                // Using helper to prevent "undefined" or "NaN" from showing
-                const safeVal = (v) => (v !== undefined && v !== null && !isNaN(v)) ? v : '--';
-
-                document.getElementById('disp-temp').innerText = safeVal(data.temperature);
-                document.getElementById('disp-hum').innerText = safeVal(data.humidity);
-                document.getElementById('disp-soil').innerText = safeVal(data.soilMoisture);
-                document.getElementById('disp-n').innerText = safeVal(data.n);
-                document.getElementById('disp-p').innerText = safeVal(data.p);
-                document.getElementById('disp-k').innerText = safeVal(data.k);
-
-                state.connected = true;
-                state.failCount = 0;
-                updateStatus("SYSTEM ONLINE");
-
-            } catch (err) {
-                state.failCount++;
-                // Progressive backoff messaging
-                if (state.failCount > 5) {
-                    updateStatus("CONNECTION LOST - CHECK DEVICE", true);
-                    state.connected = false;
-                }
+        function showHelp(page) {
+            const modal = document.getElementById('help-modal');
+            const title = document.getElementById('help-title');
+            const text = document.getElementById('help-text');
+            modal.style.display = 'flex';
+            if(page === 'home') {
+                title.innerText = "Monitor Dashboard";
+                text.innerText = "View real-time sensor data. Double-tap the video feed to view full screen. Rotate phone for better view.";
+            } else if (page === 'manual') {
+                title.innerText = "Manual Override";
+                text.innerText = "WARNING: Safety limits are disabled in Manual Mode.\nControls:\n- Exhaust: Fan\n- Peltier: Cooling Module\n- Pump: Water";
+            } else if (page === 'config') {
+                title.innerText = "Automation Settings";
+                text.innerText = "Set target values for Auto Mode. Logic:\n- Temp > Target + 1°C = Cooling ON\n- Soil < Target - 5% = Water ON";
             }
         }
 
-        // Auto-poll every 2 seconds
-        setInterval(fetchData, 2000);
+        // Camera Modal Logic
+        function openCamModal() {
+            document.getElementById('cam-modal').style.display = 'flex';
+            document.getElementById('cam-modal-img').src = document.getElementById('cam-img').src;
+        }
+        function closeCamModal() { document.getElementById('cam-modal').style.display = 'none'; }
 
-        // Save Config with Validation (Human Error Compensation)
-        async function saveConfig() {
-            const ids = ['in-temp', 'in-hum', 'in-soil', 'in-n', 'in-p', 'in-k'];
-            const payload = {};
-            let hasError = false;
-
-            ids.forEach(id => {
-                const el = document.getElementById(id);
-                let val = parseFloat(el.value);
+        // --- 2. IOT MANAGER ---
+        const iot = {
+            socket: null,
+            isManual: false,
+            init: () => {
+                iot.socket = io(CONFIG.serverUrl, { transports: ['websocket', 'polling'] });
                 
-                // HUMAN ERROR FIX: If empty or invalid, set to 0 or safe default
-                if (isNaN(val) || val < 0) {
-                    val = 0; 
-                    el.value = 0; // Visual feedback to user
-                    hasError = true; // Flag for notification
-                }
-                payload[id.replace('in-', '')] = val;
-            });
-
-            if(hasError) {
-                alert("Some invalid values were detected and reset to 0. Please review before confirming.");
-                return; 
-            }
-
-            try {
-                updateStatus("UPLOADING CONFIG...", false);
-                await fetch(`${ARDUINO_URL}/set`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
+                iot.socket.on('connect', () => {
+                    document.getElementById('conn-text').innerText = "ONLINE";
+                    document.getElementById('conn-dot').classList.add('online');
                 });
-                document.getElementById('config-msg').innerText = "SETTINGS SAVED SUCCESSFULLY";
-                document.getElementById('config-msg').style.color = "var(--accent)";
-                setTimeout(() => document.getElementById('config-msg').innerText = "", 3000);
-            } catch (e) {
-                alert("Failed to send settings to Arduino.");
-            }
-        }
-
-        // --- CAMERA FEATURES ---
-        const videoEl = document.getElementById('video-feed');
-        
-        // 1. Set source (Standard MJPEG stream path usually)
-        videoEl.src = `${ARDUINO_URL}/stream`; 
-
-        // 2. Double Click Enlarge
-        videoEl.addEventListener('dblclick', () => {
-            videoEl.classList.toggle('expanded');
-        });
-
-        // 3. Touch Double Tap Support
-        let lastTap = 0;
-        videoEl.addEventListener('touchend', (e) => {
-            const now = new Date().getTime();
-            if (now - lastTap < 300) {
-                videoEl.classList.toggle('expanded');
-                e.preventDefault();
-            }
-            lastTap = now;
-        });
-
-        // --- MINIGAME ENGINE V1.2 (Rewritten) ---
-        const canvas = document.getElementById('cvs');
-        const ctx = canvas.getContext('2d');
-        let animationFrameId;
-
-        // Resize handling
-        function fitCanvas() {
-            canvas.width = document.getElementById('game-wrapper').offsetWidth;
-            canvas.height = document.getElementById('game-wrapper').offsetHeight;
-        }
-        window.addEventListener('resize', fitCanvas);
-        fitCanvas();
-
-        // MOVEMENT FIX: Boolean Map
-        const input = { u: false, d: false, l: false, r: false, fire: false };
-
-        window.addEventListener('keydown', (e) => {
-            const k = e.key.toLowerCase();
-            if(k === 'w' || k === 'arrowup') input.u = true;
-            if(k === 's' || k === 'arrowdown') input.d = true;
-            if(k === 'a' || k === 'arrowleft') input.l = true;
-            if(k === 'd' || k === 'arrowright') input.r = true;
-            if(k === ' ') input.fire = true;
-        });
-
-        window.addEventListener('keyup', (e) => {
-            const k = e.key.toLowerCase();
-            if(k === 'w' || k === 'arrowup') input.u = false;
-            if(k === 's' || k === 'arrowdown') input.d = false;
-            if(k === 'a' || k === 'arrowleft') input.l = false;
-            if(k === 'd' || k === 'arrowright') input.r = false;
-            if(k === ' ') input.fire = false;
-        });
-
-        const game = {
-            state: 'MENU', // MENU, PLAYING, PAUSED, BOSSWARN, BOSS, GAMEOVER
-            score: 0,
-            frame: 0,
-            player: { x: 50, y: 200, w: 30, h: 30, speed: 5, hp: 3 },
-            bullets: [],
-            enemies: [],
-            particles: [],
-            boss: null
-        };
-
-        function resetGame() {
-            game.score = 0;
-            game.player.hp = 3;
-            game.bullets = [];
-            game.enemies = [];
-            game.particles = [];
-            game.boss = null;
-            game.frame = 0;
-            document.getElementById('score').innerText = "000000";
-        }
-
-        function startGame() {
-            resetGame();
-            game.state = 'PLAYING';
-            document.getElementById('game-overlay').style.display = 'none';
-            loop();
-        }
-
-        function togglePause() {
-            if (game.state === 'PLAYING' || game.state === 'BOSS') {
-                game.state = 'PAUSED';
-                document.getElementById('game-overlay').style.display = 'block';
-                document.querySelector('#game-overlay h2').innerText = "SYSTEM PAUSED";
-                document.querySelector('#game-overlay button').innerText = "RESUME";
-                document.querySelector('#game-overlay button').onclick = togglePause;
-            } else if (game.state === 'PAUSED') {
-                game.state = (game.boss) ? 'BOSS' : 'PLAYING';
-                document.getElementById('game-overlay').style.display = 'none';
-                loop();
-            }
-        }
-
-        function spawnEnemy() {
-            // Failsafe: Cap max enemies to prevent browser crash
-            if(game.enemies.length > 20) return;
-
-            game.enemies.push({
-                x: canvas.width + 20,
-                y: Math.random() * (canvas.height - 40) + 20,
-                w: 25, h: 25,
-                vx: -(Math.random() * 3 + 2), // Random speed
-                hp: 1,
-                type: 'drone'
-            });
-        }
-
-        function initBoss() {
-            game.state = 'BOSSWARN';
-            // Simple warning animation logic could go here
-            setTimeout(() => {
-                game.state = 'BOSS';
-                game.boss = {
-                    x: canvas.width + 100,
-                    y: canvas.height / 2,
-                    w: 80, h: 80,
-                    hp: 50,
-                    dir: 1
-                };
-            }, 2000);
-        }
-
-        function update() {
-            if (game.state === 'PAUSED' || game.state === 'GAMEOVER') return;
-
-            // Player Move (with Screen Boundaries)
-            if (input.u && game.player.y > 0) game.player.y -= game.player.speed;
-            if (input.d && game.player.y < canvas.height - game.player.h) game.player.y += game.player.speed;
-            if (input.l && game.player.x > 0) game.player.x -= game.player.speed;
-            if (input.r && game.player.x < canvas.width - game.player.w) game.player.x += game.player.speed;
-
-            // Fire (Rate limited)
-            if (input.fire && game.frame % 10 === 0) {
-                game.bullets.push({ x: game.player.x + 20, y: game.player.y + 10, w: 10, h: 4, vx: 10 });
-            }
-
-            // Update Bullets
-            game.bullets.forEach((b, i) => {
-                b.x += b.vx;
-                if (b.x > canvas.width) game.bullets.splice(i, 1);
-            });
-
-            // Boss Logic
-            if (game.boss) {
-                // Intro move
-                if (game.boss.x > canvas.width - 150) game.boss.x -= 2;
-                // Bobbing move
-                game.boss.y += Math.sin(game.frame / 20) * 2;
                 
-                // Boss Collision
-                game.bullets.forEach((b, i) => {
-                    if (b.x < game.boss.x + game.boss.w && b.x + b.w > game.boss.x &&
-                        b.y < game.boss.y + game.boss.h && b.y + b.h > game.boss.y) {
-                        game.boss.hp--;
-                        game.bullets.splice(i, 1);
-                        // Hit particle
-                        game.particles.push({x: b.x, y: b.y, life: 10, color: '#fff'});
+                iot.socket.on('disconnect', () => {
+                    document.getElementById('conn-text').innerText = "OFFLINE";
+                    document.getElementById('conn-dot').classList.remove('online');
+                });
+
+                iot.socket.on('sensor_data', (data) => {
+                    if(data.temp) document.getElementById('val-temp').innerText = data.temp.toFixed(1);
+                    if(data.hum) document.getElementById('val-hum').innerText = data.hum.toFixed(1);
+                    if(data.soil1) document.getElementById('val-soil').innerText = data.soil1; // Using soil1 as avg
+                    if(data.n !== undefined) document.getElementById('val-npk').innerText = `${data.n}-${data.p}-${data.k}`;
+                });
+
+                iot.socket.on('video_frame', (b64) => {
+                    const src = "data:image/jpeg;base64," + b64;
+                    document.getElementById('cam-img').src = src;
+                    if(document.getElementById('cam-modal').style.display === 'flex') {
+                        document.getElementById('cam-modal-img').src = src;
                     }
                 });
+            },
 
-                if (game.boss.hp <= 0) {
-                    game.score += 5000;
-                    game.boss = null;
-                    game.state = 'PLAYING'; // Loop back to normal
-                }
-            } else {
-                // Normal Enemy Spawning logic
-                if (game.frame % 60 === 0) spawnEnemy();
+            toggleMode: () => {
+                iot.isManual = !iot.isManual;
+                const btn = document.getElementById('btn-mode');
+                const panel = document.getElementById('manual-controls');
                 
-                // Trigger Boss
-                if (game.score > 2000 && !game.boss && game.state !== 'BOSSWARN') {
-                   initBoss(); 
+                btn.innerText = iot.isManual ? "MANUAL" : "AUTO";
+                btn.classList.toggle('mode-man', iot.isManual);
+                panel.style.opacity = iot.isManual ? "1" : "0.5";
+                panel.style.pointerEvents = iot.isManual ? "auto" : "none";
+                iot.socket.emit('command', { mode: iot.isManual ? 'manual' : 'auto' });
+            },
+
+            toggleDevice: (devId) => {
+                if(!iot.isManual) return;
+                const btn = document.getElementById('btn-' + (devId === 'pump_n' ? 'npk' : (devId === 'pump_w' ? 'pump' : (devId === 'exhaust' ? 'fan' : 'peltier'))));
+                const isOn = btn.classList.contains('on');
+                
+                // Optimistic UI
+                if(isOn) { btn.classList.remove('on'); btn.innerText = "OFF"; } 
+                else { btn.classList.add('on'); btn.innerText = "ON"; }
+
+                iot.socket.emit('command', { [devId]: !isOn });
+            },
+
+            saveConfig: () => {
+                // FAILSAFE: Validate Inputs
+                const t = parseFloat(document.getElementById('cfg-temp').value);
+                const s = parseInt(document.getElementById('cfg-soil').value);
+
+                if(isNaN(t) || t < 15 || t > 40) {
+                    alert("Error: Temperature target must be between 15°C and 40°C.");
+                    return;
                 }
+                if(isNaN(s) || s < 0 || s > 90) {
+                    alert("Error: Soil target must be between 0% and 90%.");
+                    return;
+                }
+
+                iot.socket.emit('command', { set_temp: t, set_soil: s });
+                alert("Configuration verified and uploaded.");
             }
+        };
+        iot.init();
 
-            // Enemy Logic
-            game.enemies.forEach((e, i) => {
-                e.x += e.vx;
+        // --- 3. SYNTHETOS GAME ENGINE (Heavy Modification) ---
+        const gameApp = {
+            canvas: document.getElementById('gc'),
+            ctx: document.getElementById('gc').getContext('2d'),
+            isRunning: false, isPaused: false,
+            width: 0, height: 0, loopId: null,
+            
+            // Game State
+            phase: 0, // 0: Intro, 1: Shield, 2: Transform, 3: Exposed
+            phaseTimer: 0,
+            shake: 0,
 
-                // Collision with Player
-                if (e.x < game.player.x + game.player.w && e.x + e.w > game.player.x &&
-                    e.y < game.player.y + game.player.h && e.y + e.h > game.player.y) {
-                    game.state = 'GAMEOVER';
-                    endGame();
+            // Entities
+            player: { 
+                x: 0, y: 0, r: 15, hp: 100, speed: 6, bullets: [], 
+                dashCooldown: 0, dashDuration: 0, invulnerable: false 
+            },
+            boss: { 
+                x: 0, y: 0, r: 60, hp: 1000, maxHp: 1000, 
+                angle: 0, projectiles: [], attackTimer: 0, pattern: 0 
+            },
+            particles: [],
+
+            // Input
+            keys: { w: false, a: false, s: false, d: false, space: false, shift: false },
+            joy: { active: false, dx: 0, dy: 0, id: null, startX: 0, startY: 0 },
+
+            open: () => {
+                document.getElementById('game-container').style.display = 'block';
+                document.querySelector('.nav-bar').style.display = 'none';
+                gameApp.resize();
+                document.getElementById('menu-start').style.display = 'flex';
+                document.getElementById('menu-pause').style.display = 'none';
+                document.getElementById('menu-over').style.display = 'none';
+                document.getElementById('menu-win').style.display = 'none';
+            },
+
+            close: () => {
+                gameApp.isRunning = false;
+                cancelAnimationFrame(gameApp.loopId);
+                document.getElementById('game-container').style.display = 'none';
+                document.querySelector('.nav-bar').style.display = 'flex';
+            },
+
+            resize: () => {
+                gameApp.width = window.innerWidth;
+                gameApp.height = window.innerHeight;
+                gameApp.canvas.width = gameApp.width;
+                gameApp.canvas.height = gameApp.height;
+            },
+
+            startMatch: () => {
+                // Reset Logic
+                gameApp.player.x = gameApp.width / 2;
+                gameApp.player.y = gameApp.height - 150;
+                gameApp.player.hp = 100;
+                gameApp.player.bullets = [];
+                gameApp.player.dashCooldown = 0;
+                
+                gameApp.boss.x = gameApp.width / 2;
+                gameApp.boss.y = 150;
+                gameApp.boss.hp = 1000;
+                gameApp.boss.maxHp = 1000;
+                gameApp.boss.projectiles = [];
+                gameApp.boss.attackTimer = 0;
+                
+                gameApp.phase = 0; // Intro
+                gameApp.phaseTimer = 100; // Intro duration
+                gameApp.particles = [];
+                
+                document.querySelectorAll('.g-menu').forEach(m => m.style.display = 'none');
+                gameApp.isRunning = true;
+                gameApp.isPaused = false;
+                gameApp.loop();
+            },
+
+            pause: () => {
+                if(!gameApp.isRunning) return;
+                gameApp.isPaused = true;
+                document.getElementById('menu-pause').style.display = 'flex';
+            },
+
+            resume: () => {
+                gameApp.isPaused = false;
+                document.getElementById('menu-pause').style.display = 'none';
+                gameApp.loop();
+            },
+
+            // --- DRAWING HELPERS ---
+            drawPoly: (ctx, x, y, sides, radius, color, rotation = 0) => {
+                ctx.beginPath();
+                for (let i = 0; i < sides; i++) {
+                    const angle = rotation + (i * 2 * Math.PI / sides);
+                    ctx.lineTo(x + radius * Math.cos(angle), y + radius * Math.sin(angle));
+                }
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+            },
+
+            spawnExplosion: (x, y, color, count) => {
+                for(let i=0; i<count; i++) {
+                    gameApp.particles.push({
+                        x: x, y: y, 
+                        vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, 
+                        life: 20 + Math.random()*20, color: color
+                    });
+                }
+            },
+
+            // --- GAME LOOP ---
+            loop: () => {
+                if(!gameApp.isRunning || gameApp.isPaused) return;
+                const ctx = gameApp.ctx;
+                const g = gameApp;
+
+                // Screen Shake
+                let rx = 0, ry = 0;
+                if(g.shake > 0) {
+                    rx = (Math.random()-0.5)*g.shake;
+                    ry = (Math.random()-0.5)*g.shake;
+                    g.shake *= 0.9;
+                    if(g.shake < 0.5) g.shake = 0;
                 }
 
-                // Collision with Bullets
-                game.bullets.forEach((b, bi) => {
-                    if (b.x < e.x + e.w && b.x + b.w > e.x &&
-                        b.y < e.y + e.h && b.y + b.h > e.y) {
-                        game.enemies.splice(i, 1);
-                        game.bullets.splice(bi, 1);
-                        game.score += 100;
-                        document.getElementById('score').innerText = game.score.toString().padStart(6, '0');
-                        // Particles
-                        for(let k=0; k<5; k++) {
-                           game.particles.push({
-                               x: e.x, y: e.y, 
-                               vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, 
-                               life: 20, color: 'orange'
-                           }); 
+                // Clear
+                ctx.save();
+                ctx.translate(rx, ry);
+                ctx.fillStyle = 'rgba(0,0,0,0.2)'; // Trails
+                ctx.fillRect(-10, -10, g.width+20, g.height+20);
+
+                // --- 1. PLAYER LOGIC ---
+                // Dash Logic
+                if(g.player.dashDuration > 0) {
+                    g.player.dashDuration--;
+                    g.player.invulnerable = true;
+                } else {
+                    g.player.invulnerable = false;
+                }
+                if(g.player.dashCooldown > 0) g.player.dashCooldown--;
+
+                // Movement
+                let dx = 0, dy = 0;
+                if(g.keys.w) dy = -1; if(g.keys.s) dy = 1;
+                if(g.keys.a) dx = -1; if(g.keys.d) dx = 1;
+                if(g.joy.active) { dx = g.joy.dx; dy = g.joy.dy; }
+                
+                // Dash Trigger
+                if((g.keys.shift) && g.player.dashCooldown <= 0) {
+                    g.player.dashDuration = 15; // 15 frames of dash
+                    g.player.dashCooldown = 100;
+                    g.keys.shift = false; // consume input
+                }
+
+                // Apply Velocity
+                let speed = g.player.dashDuration > 0 ? 15 : g.player.speed;
+                // Normalize
+                const mag = Math.sqrt(dx*dx + dy*dy);
+                if(mag > 0 && !g.joy.active) { dx/=mag; dy/=mag; }
+                
+                g.player.x += dx * speed;
+                g.player.y += dy * speed;
+                
+                // Clamp
+                g.player.x = Math.max(20, Math.min(g.width-20, g.player.x));
+                g.player.y = Math.max(20, Math.min(g.height-20, g.player.y));
+
+                // Draw Player (Vector Drone)
+                ctx.save();
+                ctx.translate(g.player.x, g.player.y);
+                if(g.player.invulnerable) ctx.globalAlpha = 0.5;
+                // Thruster
+                ctx.fillStyle = `rgba(0, 243, 255, ${Math.random()})`;
+                ctx.beginPath(); ctx.moveTo(-5, 10); ctx.lineTo(0, 25 + Math.random()*10); ctx.lineTo(5, 10); ctx.fill();
+                // Body
+                ctx.fillStyle = '#eee';
+                ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(12, 10); ctx.lineTo(0, 5); ctx.lineTo(-12, 10); ctx.fill();
+                ctx.restore();
+
+                // Shooting
+                if(g.keys.space && g.player.bullets.length < 10) {
+                    g.player.bullets.push({x: g.player.x, y: g.player.y - 10, vx: 0, vy: -20});
+                    g.keys.space = false; 
+                }
+
+                // Render Bullets
+                ctx.fillStyle = '#00f3ff';
+                for(let i=g.player.bullets.length-1; i>=0; i--) {
+                    let b = g.player.bullets[i];
+                    b.y += b.vy;
+                    ctx.fillRect(b.x-2, b.y-10, 4, 15);
+                    
+                    // Collision Boss
+                    if(g.phase === 1 || g.phase === 3) {
+                        let dist = Math.hypot(b.x - g.boss.x, b.y - g.boss.y);
+                        if(dist < g.boss.r) {
+                            g.boss.hp -= 10;
+                            g.player.bullets.splice(i, 1);
+                            g.spawnExplosion(b.x, b.y, '#00f3ff', 3);
+                            continue;
                         }
                     }
-                });
+                    if(b.y < -50) g.player.bullets.splice(i, 1);
+                }
 
-                if (e.x + e.w < 0) game.enemies.splice(i, 1);
-            });
+                // --- 2. BOSS LOGIC ---
+                g.boss.angle += 0.02;
 
-            // Particles
-            game.particles.forEach((p, i) => {
-                p.x += p.vx || 0;
-                p.y += p.vy || 0;
-                p.life--;
-                if(p.life <= 0) game.particles.splice(i, 1);
-            });
+                // Phase 0: Intro
+                if(g.phase === 0) {
+                    document.getElementById('boss-name').innerText = "SYSTEM ALERT";
+                    g.phaseTimer--;
+                    g.boss.y = (g.height * 0.2) + Math.sin(g.phaseTimer*0.1)*5;
+                    // Draw Intro Form
+                    g.drawPoly(ctx, g.boss.x, g.boss.y, 6, g.boss.r, '#555', g.boss.angle);
+                    if(g.phaseTimer <= 0) { g.phase = 1; document.getElementById('boss-name').innerText = "CORE: SHIELDED"; }
+                }
 
-            game.frame++;
-        }
-
-        function draw() {
-            // Clear Screen
-            ctx.fillStyle = '#111';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // DIZZINESS FIX: Replaced fast scrolling stars with slow static dust
-            ctx.fillStyle = '#222';
-            for(let i=0; i<20; i++) {
-                // Static background elements
-                ctx.fillRect((i * 50 + game.frame/2) % canvas.width, (i * 30) % canvas.height, 2, 2);
-            }
-
-            if (game.state === 'PLAYING' || game.state === 'BOSS') {
-                // Complex Player Shape (Triangle + Engine)
-                ctx.fillStyle = '#00e676';
-                ctx.beginPath();
-                ctx.moveTo(game.player.x + 30, game.player.y + 15); // Nose
-                ctx.lineTo(game.player.x, game.player.y);
-                ctx.lineTo(game.player.x + 5, game.player.y + 15);
-                ctx.lineTo(game.player.x, game.player.y + 30);
-                ctx.fill();
-
-                // Bullets
-                ctx.fillStyle = '#ffff00';
-                game.bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
-
-                // Complex Enemy Shapes
-                game.enemies.forEach(e => {
-                    ctx.fillStyle = '#ff5252';
-                    // Main body
-                    ctx.fillRect(e.x, e.y, e.w, e.h);
-                    // Detail
-                    ctx.fillStyle = '#8a0f0f';
-                    ctx.fillRect(e.x + 5, e.y + 5, e.w - 10, e.h - 10);
-                });
-
-                // Complex Boss Shape (Hexagon + Core)
-                if (game.boss) {
-                    ctx.fillStyle = '#ab47bc';
-                    const b = game.boss;
-                    ctx.beginPath();
-                    ctx.moveTo(b.x + b.w/2, b.y);
-                    ctx.lineTo(b.x + b.w, b.y + b.h/3);
-                    ctx.lineTo(b.x + b.w, b.y + 2*b.h/3);
-                    ctx.lineTo(b.x + b.w/2, b.y + b.h);
-                    ctx.lineTo(b.x, b.y + 2*b.h/3);
-                    ctx.lineTo(b.x, b.y + b.h/3);
-                    ctx.fill();
+                // Phase 1: Shielded Core
+                else if (g.phase === 1) {
+                    g.boss.x = (g.width/2) + Math.sin(Date.now()*0.001) * 100;
+                    g.boss.attackTimer++;
                     
-                    // Core
-                    ctx.fillStyle = '#fff';
+                    // Draw: Hexagon Shield
+                    ctx.shadowBlur = 15; ctx.shadowColor = 'var(--pink)';
+                    g.drawPoly(ctx, g.boss.x, g.boss.y, 6, g.boss.r, '#222', g.boss.angle);
+                    g.drawPoly(ctx, g.boss.x, g.boss.y, 3, g.boss.r/2, '#ff0055', -g.boss.angle*2);
+                    ctx.shadowBlur = 0;
+
+                    // Phase 1 Attacks (7 Patterns)
+                    if(g.boss.attackTimer % 60 === 0) {
+                        const pat = Math.floor(Math.random() * 7);
+                        if(pat === 0) { // Ring
+                            for(let i=0; i<12; i++) g.shootBoss(g.boss.x, g.boss.y, Math.cos(i*0.5)*4, Math.sin(i*0.5)*4);
+                        } else if (pat === 1) { // Aimed Tri
+                            let a = Math.atan2(g.player.y - g.boss.y, g.player.x - g.boss.x);
+                            g.shootBoss(g.boss.x, g.boss.y, Math.cos(a)*6, Math.sin(a)*6);
+                            g.shootBoss(g.boss.x, g.boss.y, Math.cos(a+0.2)*6, Math.sin(a+0.2)*6);
+                            g.shootBoss(g.boss.x, g.boss.y, Math.cos(a-0.2)*6, Math.sin(a-0.2)*6);
+                        } else if (pat === 2) { // Spiral
+                             for(let i=0; i<5; i++) g.shootBoss(g.boss.x, g.boss.y, Math.cos(g.boss.angle+i)*5, Math.sin(g.boss.angle+i)*5);
+                        } else if (pat === 3) { // Wall
+                             for(let i=0; i<10; i++) g.shootBoss(i*(g.width/10), 0, 0, 4);
+                        } else if (pat === 4) { // Shotgun
+                             for(let i=0; i<8; i++) g.shootBoss(g.boss.x, g.boss.y, (Math.random()-0.5)*10, 5 + Math.random()*5);
+                        } else if (pat === 5) { // Cross
+                             g.shootBoss(g.boss.x, g.boss.y, 5, 0); g.shootBoss(g.boss.x, g.boss.y, -5, 0);
+                             g.shootBoss(g.boss.x, g.boss.y, 0, 5); g.shootBoss(g.boss.x, g.boss.y, 0, -5);
+                        } else { // Random Rain
+                             g.shootBoss(Math.random()*g.width, 0, 0, 8);
+                        }
+                    }
+
+                    if(g.boss.hp <= 500) {
+                        g.phase = 2; g.phaseTimer = 150; g.shake = 20;
+                        g.spawnExplosion(g.boss.x, g.boss.y, 'white', 50);
+                    }
+                }
+
+                // Phase 2: Transformation Cutscene
+                else if (g.phase === 2) {
+                    g.player.invulnerable = true;
+                    g.phaseTimer--;
+                    g.boss.x = g.width/2; g.boss.y = 200;
+                    document.getElementById('boss-name').innerText = "ERROR... RECONFIGURING...";
+                    
+                    // Draw glitchy mess
+                    let scale = 1 + Math.random();
+                    g.drawPoly(ctx, g.boss.x, g.boss.y, 8, g.boss.r * scale, '#fff', Math.random()*10);
+                    
+                    if(g.phaseTimer <= 0) { 
+                        g.phase = 3; 
+                        document.getElementById('boss-name').innerText = "CORE: UNSHACKLED";
+                        g.player.invulnerable = false;
+                        g.boss.maxHp = 500; // Reset bar visual for P2
+                    }
+                }
+
+                // Phase 3: Unshackled (Phase 2 Combat)
+                else if (g.phase === 3) {
+                    g.boss.attackTimer++;
+                    // Erratic Movement
+                    if(g.boss.attackTimer % 40 === 0) {
+                        g.boss.tx = Math.random() * g.width;
+                        g.boss.ty = Math.random() * (g.height/2);
+                    }
+                    g.boss.x += (g.boss.tx - g.boss.x || 0) * 0.05;
+                    g.boss.y += (g.boss.ty - g.boss.y || 0) * 0.05;
+
+                    // Draw: Spiky Star
+                    ctx.shadowBlur = 30; ctx.shadowColor = 'red';
                     ctx.beginPath();
-                    ctx.arc(b.x + b.w/2, b.y + b.h/2, 10, 0, Math.PI*2);
-                    ctx.fill();
+                    for(let i=0; i<16; i++) {
+                        let r = (i%2===0) ? g.boss.r : g.boss.r*0.4;
+                        let a = g.boss.angle + (i * Math.PI * 2)/16;
+                        ctx.lineTo(g.boss.x + Math.cos(a)*r, g.boss.y + Math.sin(a)*r);
+                    }
+                    ctx.fillStyle = '#ff0055'; ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    // Phase 2 Attacks (8 Patterns - Harder)
+                    if(g.boss.attackTimer % 40 === 0) {
+                        const pat = Math.floor(Math.random() * 8);
+                        if(pat === 0) { // Nova
+                            for(let i=0; i<20; i++) g.shootBoss(g.boss.x, g.boss.y, Math.cos(i)*6, Math.sin(i)*6);
+                        } else if (pat === 1) { // Homing Start
+                            g.shootBoss(g.boss.x, g.boss.y, 0, 2, true); // True = homing
+                        } else if (pat === 2) { // Laser Sweep (Simulated by dense bullets)
+                             for(let i=0; i<10; i++) g.shootBoss(g.boss.x, g.boss.y, Math.cos(g.boss.angle)*10 + i, Math.sin(g.boss.angle)*10 + i);
+                        } else if (pat === 3) { // Chaos Spray
+                             for(let i=0; i<5; i++) g.shootBoss(g.boss.x, g.boss.y, (Math.random()-0.5)*15, (Math.random()-0.5)*15);
+                        } else if (pat === 4) { // Fast Stream aimed
+                             let a = Math.atan2(g.player.y - g.boss.y, g.player.x - g.boss.x);
+                             g.shootBoss(g.boss.x, g.boss.y, Math.cos(a)*12, Math.sin(a)*12);
+                        } else if (pat === 5) { // Side Ambush
+                             g.shootBoss(0, g.player.y, 5, 0); g.shootBoss(g.width, g.player.y, -5, 0);
+                        } else if (pat === 6) { // X-Pattern
+                             g.shootBoss(g.boss.x, g.boss.y, 5, 5); g.shootBoss(g.boss.x, g.boss.y, -5, 5);
+                             g.shootBoss(g.boss.x, g.boss.y, 5, -5); g.shootBoss(g.boss.x, g.boss.y, -5, -5);
+                        } else { // Expanding Circle
+                             for(let i=0; i<8; i++) g.shootBoss(g.player.x + Math.cos(i)*100, g.player.y + Math.sin(i)*100, -Math.cos(i)*2, -Math.sin(i)*2);
+                        }
+                    }
+
+                    if(g.boss.hp <= 0) {
+                        g.spawnExplosion(g.boss.x, g.boss.y, '#ff0055', 100);
+                        document.getElementById('menu-win').style.display = 'flex';
+                        g.isRunning = false;
+                    }
+                }
+
+                // Projectiles Logic
+                ctx.fillStyle = '#ff5555';
+                for(let i=g.boss.projectiles.length-1; i>=0; i--) {
+                    let p = g.boss.projectiles[i];
+                    if(p.homing) {
+                        let angle = Math.atan2(g.player.y - p.y, g.player.x - p.x);
+                        p.vx += Math.cos(angle) * 0.2;
+                        p.vy += Math.sin(angle) * 0.2;
+                        // Cap speed
+                        let pmag = Math.hypot(p.vx, p.vy);
+                        if(pmag > 5) { p.vx = (p.vx/pmag)*5; p.vy = (p.vy/pmag)*5; }
+                    }
+                    p.x += p.vx; p.y += p.vy;
+                    
+                    // Draw projectile
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
+
+                    // Hit Player
+                    let hitDist = Math.hypot(p.x - g.player.x, p.y - g.player.y);
+                    if(hitDist < g.player.r + 5) {
+                        if(!g.player.invulnerable) {
+                            g.player.hp -= 15;
+                            g.shake = 10;
+                            g.spawnExplosion(g.player.x, g.player.y, '#39ff14', 10);
+                            g.boss.projectiles.splice(i, 1);
+                        }
+                    } else if (p.x < 0 || p.x > g.width || p.y < 0 || p.y > g.height) {
+                         g.boss.projectiles.splice(i, 1);
+                    }
                 }
 
                 // Particles
-                game.particles.forEach(p => {
-                    ctx.fillStyle = p.color;
-                    ctx.fillRect(p.x, p.y, 3, 3);
-                });
-            }
-        }
+                for(let i=g.particles.length-1; i>=0; i--) {
+                    let pt = g.particles[i];
+                    pt.x += pt.vx; pt.y += pt.vy; pt.life--;
+                    ctx.fillStyle = pt.color; ctx.fillRect(pt.x, pt.y, 3, 3);
+                    if(pt.life <= 0) g.particles.splice(i, 1);
+                }
 
-        function endGame() {
-            document.getElementById('game-overlay').style.display = 'block';
-            document.querySelector('#game-overlay h2').innerText = "CRITICAL FAILURE";
-            document.getElementById('game-subtext').innerText = "Final Score: " + game.score;
-            document.querySelector('#game-overlay button').innerText = "REBOOT SYSTEM";
-            document.querySelector('#game-overlay button').onclick = startGame;
-        }
+                // HUD
+                document.getElementById('hud-player-hp').style.width = Math.max(0, g.player.hp) + "%";
+                let bossPct = (g.phase < 3) ? (g.boss.hp / 1000 * 100) : (g.boss.hp / 500 * 100);
+                document.getElementById('hud-boss-hp').style.width = Math.max(0, bossPct) + "%";
+                
+                // Dash UI
+                const dashOverlay = document.getElementById('dash-overlay');
+                if(g.player.dashCooldown <= 0) dashOverlay.classList.add('visible');
+                else dashOverlay.classList.remove('visible');
 
-        function loop() {
-            if (game.state === 'PLAYING' || game.state === 'BOSS' || game.state === 'BOSSWARN') {
-                update();
-                draw();
-                animationFrameId = requestAnimationFrame(loop);
+                // Lose Check
+                if(g.player.hp <= 0) {
+                    document.getElementById('menu-over').style.display = 'flex';
+                    g.isRunning = false;
+                }
+
+                ctx.restore();
+                g.loopId = requestAnimationFrame(g.loop);
+            },
+
+            shootBoss: (x, y, vx, vy, homing = false) => {
+                gameApp.boss.projectiles.push({x: x, y: y, vx: vx, vy: vy, homing: homing});
             }
-        }
+        };
+
+        // --- INPUTS ---
+        window.addEventListener('keydown', (e) => {
+            if(e.key === 'w') gameApp.keys.w = true;
+            if(e.key === 'a') gameApp.keys.a = true;
+            if(e.key === 's') gameApp.keys.s = true;
+            if(e.key === 'd') gameApp.keys.d = true;
+            if(e.key === 'Shift') gameApp.keys.shift = true;
+            if(e.key === ' ') {
+                if(gameApp.isRunning) gameApp.keys.space = true;
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            if(e.key === 'w') gameApp.keys.w = false;
+            if(e.key === 'a') gameApp.keys.a = false;
+            if(e.key === 's') gameApp.keys.s = false;
+            if(e.key === 'd') gameApp.keys.d = false;
+            if(e.key === 'Shift') gameApp.keys.shift = false;
+            if(e.key === ' ') gameApp.keys.space = false;
+            if(e.key === 'Escape' && gameApp.isRunning) gameApp.pause();
+        });
+
+        // Touch Tracking (Anti-Ghost Touch)
+        const joyZone = document.getElementById('joy-zone');
+        const stick = document.getElementById('joy-stick');
+        const fireBtn = document.getElementById('btn-fire');
+        const dashBtn = document.getElementById('btn-dash');
+
+        joyZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const t = e.changedTouches[0];
+            gameApp.joy.id = t.identifier;
+            gameApp.joy.active = true;
+            gameApp.joy.startX = t.clientX;
+            gameApp.joy.startY = t.clientY;
+            stick.style.transition = 'none';
+        }, {passive: false});
+
+        joyZone.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if(!gameApp.joy.active) return;
+            for(let i=0; i<e.changedTouches.length; i++) {
+                if(e.changedTouches[i].identifier === gameApp.joy.id) {
+                    const t = e.changedTouches[i];
+                    let dx = t.clientX - gameApp.joy.startX;
+                    let dy = t.clientY - gameApp.joy.startY;
+                    const dist = Math.min(40, Math.hypot(dx, dy));
+                    const angle = Math.atan2(dy, dx);
+                    dx = Math.cos(angle) * dist;
+                    dy = Math.sin(angle) * dist;
+                    gameApp.joy.dx = dx / 40;
+                    gameApp.joy.dy = dy / 40;
+                    stick.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+                }
+            }
+        }, {passive: false});
+
+        const resetJoy = (e) => {
+             for(let i=0; i<e.changedTouches.length; i++) {
+                if(e.changedTouches[i].identifier === gameApp.joy.id) {
+                    gameApp.joy.active = false;
+                    gameApp.joy.dx = 0; gameApp.joy.dy = 0;
+                    stick.style.transition = '0.2s';
+                    stick.style.transform = `translate(-50%, -50%)`;
+                }
+             }
+        };
+        joyZone.addEventListener('touchend', resetJoy);
+        joyZone.addEventListener('touchcancel', resetJoy);
+
+        // Buttons
+        fireBtn.addEventListener('touchstart', (e) => { e.preventDefault(); gameApp.keys.space = true; });
+        fireBtn.addEventListener('touchend', (e) => { e.preventDefault(); gameApp.keys.space = false; });
+        dashBtn.addEventListener('touchstart', (e) => { e.preventDefault(); gameApp.keys.shift = true; });
     </script>
 </body>
 </html>
