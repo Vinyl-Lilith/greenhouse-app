@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BioCube | IoT Controller</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CORE THEME --- */
+        :root {
+            --cyan: #00f3ff;
+            --pink: #ff0055;
+            --green: #39ff14;
+            --yellow: #ffd700;
+            --dark: #050510;
+            --panel: rgba(20, 20, 30, 0.9);
+            --border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
+            color: white; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        /* --- AUTH SCREEN --- */
+        #auth-screen {
+            position: fixed; inset: 0; background: #000; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .auth-box {
+            width: 320px; padding: 30px; border: 1px solid var(--cyan);
+            background: rgba(10, 10, 20, 0.9); box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+        }
+        .auth-tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid #333; }
+        .auth-tab { 
+            flex: 1; padding: 10px; text-align: center; cursor: pointer; 
+            font-family: 'Orbitron'; font-size: 0.8rem; color: #555;
+        }
+        .auth-tab.active { color: var(--cyan); border-bottom: 2px solid var(--cyan); }
+        
+        .auth-input {
+            width: 100%; margin: 8px 0; padding: 12px;
+            background: #111; border: 1px solid #444; color: white;
+            font-family: 'Orbitron'; text-align: center;
+        }
+        .btn-auth {
+            width: 100%; padding: 14px; margin-top: 15px;
+            background: var(--cyan); color: black; font-weight: bold;
+            border: none; cursor: pointer; font-family: 'Orbitron';
+        }
+
+        /* --- APP UI --- */
+        #app-container { display: none; flex: 1; flex-direction: column; height: 100%; }
+
+        .status-bar {
+            height: 60px; display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; background: rgba(0,0,0,0.9); border-bottom: 1px solid #333;
+        }
+        .brand { font-family: 'Orbitron'; font-size: 1.2rem; color: var(--green); letter-spacing: 2px; }
+        
+        .conn-group { display: flex; gap: 15px; }
+        .indicator { font-size: 0.65rem; display: flex; align-items: center; gap: 6px; font-family: 'Orbitron'; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #444; transition: 0.3s; }
+        .dot.online { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        .dot.error { background: var(--pink); box-shadow: 0 0 8px var(--pink); }
+
+        #viewport { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
+        .page { display: none; animation: fadeIn 0.3s ease; max-width: 800px; margin: 0 auto; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card {
+            background: var(--panel); border: var(--border); border-radius: 12px;
+            padding: 20px; margin-bottom: 20px; backdrop-filter: blur(8px);
+        }
+        h2 { margin: 0 0 15px 0; color: var(--cyan); font-family: 'Orbitron'; font-size: 1rem; text-transform: uppercase; }
+
+        /* --- SENSORS & CAMERA --- */
+        .cam-container {
+            width: 100%; aspect-ratio: 16/9; background: #000; border: 1px solid #333;
+            position: relative; overflow: hidden; border-radius: 8px;
+        }
+        .cam-feed { width: 100%; height: 100%; object-fit: cover; transform: rotate(180deg); }
+        
+        .sensor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px; }
+        .sensor-box { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .s-val { font-size: 1.4rem; font-weight: bold; color: #fff; display: block; font-family: 'Orbitron'; }
+        .s-lbl { font-size: 0.7rem; color: #777; text-transform: uppercase; margin-top: 4px; display: block; }
+
+        /* --- CONTROLS --- */
+        .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; }
+        .btn-toggle {
+            background: #222; color: #666; border: 1px solid #444; padding: 10px 20px;
+            cursor: pointer; font-family: 'Orbitron'; border-radius: 4px; font-size: 0.8rem;
+        }
+        .btn-toggle.active { background: var(--cyan); color: black; border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,243,255,0.3); }
+        .disabled-panel { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+
+        /* --- NAV --- */
+        .nav-bar {
+            position: fixed; bottom: 0; width: 100%; height: 75px; background: #0a0a0f;
+            border-top: 1px solid #222; display: flex; justify-content: space-around; z-index: 100;
+        }
+        .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; cursor: pointer; }
+        .nav-btn span { font-size: 1.4rem; }
+        .nav-btn div { font-size: 0.65rem; margin-top: 4px; font-family: 'Orbitron'; }
+        .nav-btn.active { color: var(--cyan); }
+
+        #modal-fs { display: none; position: fixed; inset: 0; background: #000; z-index: 10000; align-items: center; justify-content: center; }
+        #modal-img { width: 100%; height: 100%; object-fit: contain; transform: rotate(180deg); }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div class="brand" style="font-size: 2.5rem; margin-bottom: 30px;">BIOCUBE</div>
+        <div class="auth-box">
+            <div class="auth-tabs">
+                <div id="tab-login" class="auth-tab active" onclick="ui.setAuthMode('login')">LOGIN</div>
+                <div id="tab-signup" class="auth-tab" onclick="ui.setAuthMode('signup')">SIGN UP</div>
+            </div>
+            <input type="text" id="auth-user" class="auth-input" placeholder="USERNAME">
+            <input type="password" id="auth-pass" class="auth-input" placeholder="PASSWORD">
+            <button class="btn-auth" id="btn-auth-submit" onclick="app.authenticate()">INITIALIZE SESSION</button>
+            <div id="auth-msg" style="color: var(--pink); margin-top: 15px; font-size: 0.8rem; text-align: center;"></div>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <div class="status-bar">
+            <div class="brand">BIOCUBE OS</div>
+            <div class="conn-group">
+                <div class="indicator">WEB <div id="dot-web" class="dot"></div></div>
+                <div class="indicator">RASPI <div id="dot-pi" class="dot"></div></div>
+            </div>
+        </div>
+
+        <div id="viewport">
+            <div id="tab-home" class="page active">
+                <div class="card" style="padding: 10px;">
+                    <div class="cam-container" ondblclick="app.toggleFs()">
+                        <img id="cam-feed" class="cam-feed" src="" alt="SIGNAL LOST">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Live Telemetry</h2>
+                    <div class="sensor-grid">
+                        <div class="sensor-box"><span class="s-val" id="v-temp">--</span><span class="s-lbl">Temp °C</span></div>
+                        <div class="sensor-box"><span class="s-val" id="v-hum">--</span><span class="s-lbl">Humid %</span></div>
+                        <div class="sensor-box"><span class="s-val" id="v-soil">--</span><span class="s-lbl">Soil ADC</span></div>
+                        <div class="sensor-box"><span class="s-val" id="v-npk" style="font-size: 1rem; color: var(--yellow);">--</span><span class="s-lbl">N-P-K</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>24h Temperature Trend</h2>
+                    <canvas id="chart-temp" height="180"></canvas>
+                </div>
+            </div>
+
+            <div id="tab-manual" class="page">
+                <div class="card">
+                    <h2>System Authority</h2>
+                    <div class="control-row">
+                        <span>AUTOMATION ENGINE</span>
+                        <button id="btn-auto-master" class="btn-toggle active" onclick="app.toggleAuto()">ENABLED</button>
+                    </div>
+                </div>
+
+                <div id="manual-gate" class="card disabled-panel">
+                    <h2>Actuator Override</h2>
+                    <div class="control-row"><span>Water Pump</span><button class="btn-toggle" onclick="app.exec('pump_water', true)">PULSE</button></div>
+                    <div class="control-row"><span>Nutrient Pump</span><button class="btn-toggle" onclick="app.exec('pump_nutri', true)">PULSE</button></div>
+                    <div class="control-row"><span>Exhaust Fan</span><button id="btn-fan" class="btn-toggle" onclick="app.toggleSimple('fan')">OFF</button></div>
+                    <div class="control-row"><span>Peltier Cooling</span><button id="btn-pelt" class="btn-toggle" onclick="app.toggleSimple('peltier')">OFF</button></div>
+                </div>
+            </div>
+
+            <div id="tab-auto" class="page">
+                <div class="card">
+                    <h2>Target Thresholds</h2>
+                    <div style="margin-bottom:15px">
+                        <label style="font-size:0.8rem; color:#aaa">Temp Setpoint (°C)</label>
+                        <input type="number" id="in-t" class="auth-input" value="24" style="text-align: left">
+                    </div>
+                    <div style="margin-bottom:15px">
+                        <label style="font-size:0.8rem; color:#aaa">Moisture Setpoint</label>
+                        <input type="number" id="in-s" class="auth-input" value="400" style="text-align: left">
+                    </div>
+                    <button class="btn-auth" style="background: var(--green)" onclick="app.saveSets()">UPDATE BIOCUBE</button>
+                </div>
+            </div>
+
+            <div id="tab-settings" class="page">
+                <div class="card">
+                    <h2>Data Export</h2>
+                    <button class="btn-auth" style="background:#222; border:1px solid #444; color:white" onclick="app.dl('standard')">STANDARD LOGS (XLSX)</button>
+                    <button class="btn-auth" style="background:#222; border:1px solid #444; color:white" onclick="app.dl('depth')">IN-DEPTH LOGS (XLSX)</button>
+                </div>
+                <button class="btn-auth" style="background: var(--pink)" onclick="app.logout()">TERMINATE SESSION</button>
+            </div>
+        </div>
+
+        <nav class="nav-bar">
+            <div class="nav-btn active" onclick="ui.goto('home', this)"><span>🏠</span><div>HOME</div></div>
+            <div class="nav-btn" onclick="ui.goto('manual', this)"><span>🎛️</span><div>MANUAL</div></div>
+            <div class="nav-btn" onclick="ui.goto('auto', this)"><span>🤖</span><div>AUTO</div></div>
+            <div class="nav-btn" onclick="ui.goto('settings', this)"><span>⚙️</span><div>SET</div></div>
+        </nav>
+    </div>
+
+    <div id="modal-fs" onclick="app.toggleFs()"><img id="modal-img" src=""></div>
+
+    <script>
+        // --- SETUP ---
+        const API_URL = "https://biocube-backend.onrender.com"; // UPDATE THIS
+        let authMode = 'login';
+        let state = { token: localStorage.getItem('bc_token'), auto: true, fan: false, pelt: false };
+
+        const ui = {
+            setAuthMode: (m) => {
+                authMode = m;
+                document.getElementById('tab-login').className = m === 'login' ? 'auth-tab active' : 'auth-tab';
+                document.getElementById('tab-signup').className = m === 'signup' ? 'auth-tab active' : 'auth-tab';
+                document.getElementById('btn-auth-submit').innerText = m === 'login' ? 'INITIALIZE SESSION' : 'CREATE ACCOUNT';
+            },
+            goto: (id, btn) => {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById('tab-'+id).classList.add('active');
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+        };
+
+        const app = {
+            authenticate: async () => {
+                const u = document.getElementById('auth-user').value;
+                const p = document.getElementById('auth-pass').value;
+                const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+                
+                try {
+                    const res = await fetch(API_URL + path, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({username: u, password: p})
+                    });
+                    const data = await res.json();
+                    if(data.token) {
+                        localStorage.setItem('bc_token', data.token);
+                        state.token = data.token;
+                        app.init();
+                    } else {
+                        document.getElementById('auth-msg').innerText = data.error;
+                    }
+                } catch(e) { document.getElementById('auth-msg').innerText = "CONNECTION FAILED"; }
+            },
+
+            init: () => {
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('app-container').style.display = 'flex';
+                app.poll();
+                setInterval(app.poll, 2000);
+            },
+
+            poll: async () => {
+                try {
+                    const res = await fetch(API_URL + '/api/status', {
+                        headers: {'Authorization': state.token}
+                    });
+                    if(res.status === 401) app.logout();
+                    
+                    const data = await res.json();
+                    document.getElementById('dot-web').className = 'dot online';
+                    document.getElementById('dot-pi').className = data.pi_connected ? 'dot online' : 'dot error';
+                    
+                    // UI Sync
+                    if(data.telemetry) {
+                        document.getElementById('v-temp').innerText = data.telemetry.temp_in || '--';
+                        document.getElementById('v-hum').innerText = data.telemetry.hum_in || '--';
+                        document.getElementById('v-soil').innerText = data.telemetry.soil || '--';
+                        document.getElementById('v-npk').innerText = `${data.telemetry.npk_n || 0}-${data.telemetry.npk_p || 0}-${data.telemetry.npk_k || 0}`;
+                    }
+                    if(data.camera) {
+                        const b64 = "data:image/jpeg;base64," + data.camera;
+                        document.getElementById('cam-feed').src = b64;
+                        document.getElementById('modal-img').src = b64;
+                    }
+
+                    state.auto = data.settings.auto_mode;
+                    const ab = document.getElementById('btn-auto-master');
+                    ab.innerText = state.auto ? "ENABLED" : "DISABLED";
+                    ab.className = state.auto ? "btn-toggle active" : "btn-toggle";
+                    document.getElementById('manual-gate').className = state.auto ? "card disabled-panel" : "card";
+
+                } catch(e) { document.getElementById('dot-web').className = 'dot error'; }
+            },
+
+            exec: async (key, val) => {
+                await fetch(API_URL + '/api/command', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': state.token},
+                    body: JSON.stringify({[key]: val})
+                });
+            },
+
+            toggleAuto: async () => {
+                await fetch(API_URL + '/api/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': state.token},
+                    body: JSON.stringify({auto_mode: !state.auto})
+                });
+            },
+
+            toggleSimple: (type) => {
+                if(type === 'fan') {
+                    state.fan = !state.fan;
+                    document.getElementById('btn-fan').innerText = state.fan ? "ON" : "OFF";
+                    document.getElementById('btn-fan').className = state.fan ? "btn-toggle active" : "btn-toggle";
+                    app.exec('exhaust_fan', state.fan);
+                } else {
+                    state.pelt = !state.pelt;
+                    document.getElementById('btn-pelt').innerText = state.pelt ? "ON" : "OFF";
+                    document.getElementById('btn-pelt').className = state.pelt ? "btn-toggle active" : "btn-toggle";
+                    app.exec('peltier', state.pelt ? 255 : 0);
+                }
+            },
+
+            saveSets: async () => {
+                const t = document.getElementById('in-t').value;
+                const s = document.getElementById('in-s').value;
+                await fetch(API_URL + '/api/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': state.token},
+                    body: JSON.stringify({thresholds: {temp: t, soil: s}})
+                });
+                alert("BioCube Sync Complete");
+            },
+
+            dl: (t) => window.location.href = `${API_URL}/api/export?type=${t}&token=${state.token}`,
+            toggleFs: () => {
+                const m = document.getElementById('modal-fs');
+                m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+            },
+            logout: () => { localStorage.clear(); location.reload(); }
+        };
+
+        // --- CHART ---
+        new Chart(document.getElementById('chart-temp'), {
+            type: 'line',
+            data: {
+                labels: ['00:00','04:00','08:00','12:00','16:00','20:00'],
+                datasets: [{ label: 'Temp', data: [22, 21, 23, 26, 25, 23], borderColor: '#00f3ff', tension: 0.4 }]
+            },
+            options: { plugins: { legend: {display: false} }, scales: { y: { grid: {color:'#222'} }, x: { grid: {display:false} } } }
+        });
+
+        if(state.token) app.init();
+    </script>
+</body>
+</html>
