@@ -246,7 +246,7 @@
         const debug = (msg) => {
             console.log(msg);
             const d = document.getElementById('debug-log');
-            if(d) d.innerText = "DBG: " + msg;
+            if(d) d.innerText = "DBG: " + (typeof msg === 'string' ? msg : JSON.stringify(msg));
         };
 
         const ui = {
@@ -271,18 +271,18 @@
             const el = document.getElementById('server-status');
             const btn = document.getElementById('btn-auth-submit');
             const box = document.getElementById('auth-panel');
-            
-            debug("Pinging " + API_URL);
+
+            debug("Pinging " + API_URL + "/");
 
             try {
-                // We use 'no-cors' just to see if the server exists (status might be opaque)
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000); 
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-                await fetch(API_URL, { signal: controller.signal, mode: 'no-cors' });
+                const res = await fetch(API_URL + '/', { signal: controller.signal });
                 clearTimeout(timeoutId);
 
-                // Success
+                if (!res.ok) throw new Error('Status ' + res.status);
+
                 el.innerHTML = '<span style="color:var(--green)">● SERVER ONLINE</span>';
                 el.style.borderColor = 'var(--green)';
                 box.style.borderColor = 'var(--green)';
@@ -293,10 +293,9 @@
                 debug("Server Responded. Ready.");
 
             } catch (e) {
-                // Failure
                 el.innerHTML = '<span style="color:var(--yellow)">● WAKING UP / RETRYING...</span>';
                 el.style.borderColor = 'var(--yellow)';
-                debug("Retry: " + e.message);
+                debug("Retry: " + (e.message || e));
                 setTimeout(checkServer, 3000);
             }
         };
@@ -305,13 +304,12 @@
             authenticate: async () => {
                 const u = document.getElementById('auth-user').value;
                 const p = document.getElementById('auth-pass').value;
-                const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+                const path = authMode === 'login' ? '/api/login' : '/api/register';
                 
                 document.getElementById('auth-msg').innerText = "Sending Data...";
                 debug(`POST ${path}...`);
 
                 try {
-                    // CORS check occurs here. 
                     const res = await fetch(API_URL + path, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -320,12 +318,15 @@
 
                     debug(`Response Status: ${res.status}`);
 
+                    const text = await res.text();
+                    let data = {};
+                    try { data = JSON.parse(text); } catch(e) { data = { raw: text } }
+
                     if(!res.ok) {
-                        const errData = await res.json().catch(() => ({})); // Handle non-JSON errors
-                        throw new Error(errData.error || `Server Error ${res.status}`);
+                        const errMsg = (data && data.error) ? data.error : (`Server Error ${res.status}`);
+                        throw new Error(errMsg);
                     }
 
-                    const data = await res.json();
                     if(data.token) {
                         localStorage.setItem('bc_token', data.token);
                         state.token = data.token;
@@ -334,10 +335,8 @@
                         throw new Error(data.error || "No token returned");
                     }
                 } catch(e) { 
-                    // This catches Network Errors and CORS errors
                     console.error(e);
                     document.getElementById('auth-msg').innerText = "ERROR: " + e.message;
-                    
                     if(e.message.includes("Failed to fetch")) {
                         debug("CORS/Net Error. Check Backend logs.");
                     } else {
@@ -355,19 +354,27 @@
 
             poll: async () => {
                 try {
+                    if(!state.token) return app.logout();
+
                     const res = await fetch(API_URL + '/api/status', {
-                        headers: {'Authorization': state.token}
+                        headers: {'Authorization': 'Bearer ' + state.token}
                     });
-                    if(res.status === 401) app.logout();
-                    
+
+                    if(res.status === 401) return app.logout();
+                    if(!res.ok) {
+                        document.getElementById('dot-web').className = 'dot error';
+                        debug('Status fetch failed: ' + res.status);
+                        return;
+                    }
+
                     const data = await res.json();
                     document.getElementById('dot-web').className = 'dot online';
                     document.getElementById('dot-pi').className = data.pi_connected ? 'dot online' : 'dot error';
                     
                     if(data.telemetry) {
-                        document.getElementById('v-temp').innerText = data.telemetry.temp_in || '--';
-                        document.getElementById('v-hum').innerText = data.telemetry.hum_in || '--';
-                        document.getElementById('v-soil').innerText = data.telemetry.soil || '--';
+                        document.getElementById('v-temp').innerText = (data.telemetry.temp_in !== undefined) ? data.telemetry.temp_in : '--';
+                        document.getElementById('v-hum').innerText = (data.telemetry.hum_in !== undefined) ? data.telemetry.hum_in : '--';
+                        document.getElementById('v-soil').innerText = (data.telemetry.soil !== undefined) ? data.telemetry.soil : '--';
                         document.getElementById('v-npk').innerText = `${data.telemetry.npk_n || 0}-${data.telemetry.npk_p || 0}-${data.telemetry.npk_k || 0}`;
                     }
                     if(data.camera) {
@@ -382,23 +389,32 @@
                     ab.className = state.auto ? "btn-toggle active" : "btn-toggle";
                     document.getElementById('manual-gate').className = state.auto ? "card disabled-panel" : "card";
 
-                } catch(e) { document.getElementById('dot-web').className = 'dot error'; }
+                } catch(e) { 
+                    document.getElementById('dot-web').className = 'dot error';
+                    debug('Poll error: ' + (e.message || e));
+                }
             },
 
             exec: async (key, val) => {
-                await fetch(API_URL + '/api/command', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'Authorization': state.token},
-                    body: JSON.stringify({[key]: val})
-                });
+                try {
+                    await fetch(API_URL + '/api/command', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.token},
+                        body: JSON.stringify({[key]: val})
+                    });
+                } catch (e) {
+                    debug('Command error: ' + (e.message || e));
+                }
             },
 
             toggleAuto: async () => {
-                await fetch(API_URL + '/api/settings', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'Authorization': state.token},
-                    body: JSON.stringify({auto_mode: !state.auto})
-                });
+                try {
+                    await fetch(API_URL + '/api/settings', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.token},
+                        body: JSON.stringify({auto_mode: !state.auto})
+                    });
+                } catch (e) { debug('ToggleAuto error: ' + (e.message || e)); }
             },
 
             toggleSimple: (type) => {
@@ -416,17 +432,39 @@
             },
 
             saveSets: async () => {
-                const t = document.getElementById('in-t').value;
-                const s = document.getElementById('in-s').value;
-                await fetch(API_URL + '/api/settings', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'Authorization': state.token},
-                    body: JSON.stringify({thresholds: {temp: t, soil: s}})
-                });
-                alert("BioCube Sync Complete");
+                const t = Number(document.getElementById('in-t').value);
+                const s = Number(document.getElementById('in-s').value);
+                try {
+                    await fetch(API_URL + '/api/settings', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.token},
+                        body: JSON.stringify({thresholds: {temp: t, soil: s}})
+                    });
+                    alert("BioCube Sync Complete");
+                } catch (e) { debug('SaveSets error: ' + (e.message || e)); alert('Save error'); }
             },
 
-            dl: (t) => window.location.href = `${API_URL}/api/export?type=${t}&token=${state.token}`,
+            dl: async (t) => {
+                try {
+                    const res = await fetch(`${API_URL}/api/export?type=${t}`, {
+                        headers: { 'Authorization': 'Bearer ' + state.token }
+                    });
+                    if(!res.ok) throw new Error('Export failed: ' + res.status);
+                    const blob = await res.blob();
+                    const filename = `BioCube_${t}.xlsx`;
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } catch (e) {
+                    alert('Export error: ' + e.message);
+                    debug(e.message);
+                }
+            },
             toggleFs: () => {
                 const m = document.getElementById('modal-fs');
                 m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
