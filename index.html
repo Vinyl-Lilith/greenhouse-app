@@ -34,7 +34,7 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         .auth-box {
-            width: 320px; padding: 30px; border: 1px solid var(--cyan);
+            width: 340px; padding: 30px; border: 1px solid var(--cyan);
             background: rgba(10, 10, 20, 0.9); box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
             transition: box-shadow 0.3s ease;
         }
@@ -56,7 +56,6 @@
             border: none; cursor: pointer; font-family: 'Orbitron';
             transition: opacity 0.3s;
         }
-        /* New disabled state for button */
         .btn-auth:disabled {
             background: #444; color: #888; cursor: not-allowed; opacity: 0.5;
         }
@@ -120,6 +119,13 @@
 
         #modal-fs { display: none; position: fixed; inset: 0; background: #000; z-index: 10000; align-items: center; justify-content: center; }
         #modal-img { width: 100%; height: 100%; object-fit: contain; transform: rotate(180deg); }
+
+        /* --- DEBUG PANEL --- */
+        #debug-log {
+            font-family: monospace; font-size: 0.65rem; color: #aaa; 
+            margin-top: 15px; text-align: left; background: rgba(0,0,0,0.5); 
+            padding: 5px; border: 1px solid #333; width: 100%; white-space: pre-wrap; word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -129,7 +135,7 @@
         
         <div class="auth-box" id="auth-panel">
             <div id="server-status" style="margin-bottom: 20px; padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.5); font-family: 'Orbitron'; font-size: 0.75rem; text-align: center; border: 1px solid #333;">
-                📡 CONNECTING TO SATELLITE...
+                📡 PINGING SATELLITE...
             </div>
 
             <div class="auth-tabs">
@@ -139,8 +145,10 @@
             <input type="text" id="auth-user" class="auth-input" placeholder="USERNAME">
             <input type="password" id="auth-pass" class="auth-input" placeholder="PASSWORD">
             
-            <button class="btn-auth" id="btn-auth-submit" onclick="app.authenticate()" disabled>WAITING FOR SIGNAL...</button>
-            <div id="auth-msg" style="color: var(--pink); margin-top: 15px; font-size: 0.8rem; text-align: center;"></div>
+            <button class="btn-auth" id="btn-auth-submit" onclick="app.authenticate()" disabled>WAITING FOR SERVER...</button>
+            <div id="auth-msg" style="color: var(--pink); margin-top: 10px; font-size: 0.8rem; text-align: center; font-weight: bold;"></div>
+            
+            <div id="debug-log">Status: Initializing...</div>
         </div>
     </div>
 
@@ -170,7 +178,6 @@
                         <div class="sensor-box"><span class="s-val" id="v-npk" style="font-size: 1rem; color: var(--yellow);">--</span><span class="s-lbl">N-P-K</span></div>
                     </div>
                 </div>
-
                 <div class="card">
                     <h2>24h Temperature Trend</h2>
                     <canvas id="chart-temp" height="180"></canvas>
@@ -185,7 +192,6 @@
                         <button id="btn-auto-master" class="btn-toggle active" onclick="app.toggleAuto()">ENABLED</button>
                     </div>
                 </div>
-
                 <div id="manual-gate" class="card disabled-panel">
                     <h2>Actuator Override</h2>
                     <div class="control-row"><span>Water Pump</span><button class="btn-toggle" onclick="app.exec('pump_water', true)">PULSE</button></div>
@@ -232,16 +238,22 @@
 
     <script>
         // --- SETUP ---
-        const API_URL = "https://biocube-backend.onrender.com"; // UPDATE THIS IF NEEDED
+        const API_URL = "https://biocube-backend.onrender.com"; // VERIFY THIS IS CORRECT
         let authMode = 'login';
         let state = { token: localStorage.getItem('bc_token'), auto: true, fan: false, pelt: false };
+
+        // Debug Logger
+        const debug = (msg) => {
+            console.log(msg);
+            const d = document.getElementById('debug-log');
+            if(d) d.innerText = "DBG: " + msg;
+        };
 
         const ui = {
             setAuthMode: (m) => {
                 authMode = m;
                 document.getElementById('tab-login').className = m === 'login' ? 'auth-tab active' : 'auth-tab';
                 document.getElementById('tab-signup').className = m === 'signup' ? 'auth-tab active' : 'auth-tab';
-                // Only change text if button is NOT disabled (server is online)
                 const btn = document.getElementById('btn-auth-submit');
                 if(!btn.disabled) {
                     btn.innerText = m === 'login' ? 'INITIALIZE SESSION' : 'CREATE ACCOUNT';
@@ -255,22 +267,22 @@
             }
         };
 
-        // --- SERVER CHECK LOGIC ---
         const checkServer = async () => {
             const el = document.getElementById('server-status');
             const btn = document.getElementById('btn-auth-submit');
             const box = document.getElementById('auth-panel');
+            
+            debug("Pinging " + API_URL);
 
             try {
-                // Ping root of your API with no-cors to avoid errors, just need to know if it responds
-                // Timeout is important here because sleeping Render instances hang.
+                // We use 'no-cors' just to see if the server exists (status might be opaque)
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 8000); 
 
                 await fetch(API_URL, { signal: controller.signal, mode: 'no-cors' });
                 clearTimeout(timeoutId);
 
-                // If we get here, server is UP
+                // Success
                 el.innerHTML = '<span style="color:var(--green)">● SERVER ONLINE</span>';
                 el.style.borderColor = 'var(--green)';
                 box.style.borderColor = 'var(--green)';
@@ -278,14 +290,13 @@
                 
                 btn.disabled = false;
                 btn.innerText = authMode === 'login' ? 'INITIALIZE SESSION' : 'CREATE ACCOUNT';
+                debug("Server Responded. Ready.");
 
             } catch (e) {
-                // Server is down or sleeping
-                console.log("Server check failed, retrying...", e);
-                el.innerHTML = '<span style="color:var(--yellow)">● WAKING UP SERVER...</span>';
+                // Failure
+                el.innerHTML = '<span style="color:var(--yellow)">● WAKING UP / RETRYING...</span>';
                 el.style.borderColor = 'var(--yellow)';
-                
-                // Retry in 3 seconds
+                debug("Retry: " + e.message);
                 setTimeout(checkServer, 3000);
             }
         };
@@ -296,21 +307,43 @@
                 const p = document.getElementById('auth-pass').value;
                 const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
                 
+                document.getElementById('auth-msg').innerText = "Sending Data...";
+                debug(`POST ${path}...`);
+
                 try {
+                    // CORS check occurs here. 
                     const res = await fetch(API_URL + path, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({username: u, password: p})
                     });
+
+                    debug(`Response Status: ${res.status}`);
+
+                    if(!res.ok) {
+                        const errData = await res.json().catch(() => ({})); // Handle non-JSON errors
+                        throw new Error(errData.error || `Server Error ${res.status}`);
+                    }
+
                     const data = await res.json();
                     if(data.token) {
                         localStorage.setItem('bc_token', data.token);
                         state.token = data.token;
                         app.init();
                     } else {
-                        document.getElementById('auth-msg').innerText = data.error || "Authentication Failed";
+                        throw new Error(data.error || "No token returned");
                     }
-                } catch(e) { document.getElementById('auth-msg').innerText = "CONNECTION FAILED"; }
+                } catch(e) { 
+                    // This catches Network Errors and CORS errors
+                    console.error(e);
+                    document.getElementById('auth-msg').innerText = "ERROR: " + e.message;
+                    
+                    if(e.message.includes("Failed to fetch")) {
+                        debug("CORS/Net Error. Check Backend logs.");
+                    } else {
+                        debug(e.message);
+                    }
+                }
             },
 
             init: () => {
@@ -331,7 +364,6 @@
                     document.getElementById('dot-web').className = 'dot online';
                     document.getElementById('dot-pi').className = data.pi_connected ? 'dot online' : 'dot error';
                     
-                    // UI Sync
                     if(data.telemetry) {
                         document.getElementById('v-temp').innerText = data.telemetry.temp_in || '--';
                         document.getElementById('v-hum').innerText = data.telemetry.hum_in || '--';
@@ -402,7 +434,6 @@
             logout: () => { localStorage.clear(); location.reload(); }
         };
 
-        // --- CHART ---
         new Chart(document.getElementById('chart-temp'), {
             type: 'line',
             data: {
@@ -412,11 +443,9 @@
             options: { plugins: { legend: {display: false} }, scales: { y: { grid: {color:'#222'} }, x: { grid: {display:false} } } }
         });
 
-        // INIT LOGIC
         if(state.token) {
             app.init();
         } else {
-            // Trigger server check if we are on the login screen
             checkServer();
         }
     </script>
